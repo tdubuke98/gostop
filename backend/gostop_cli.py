@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import sqlite3
 import argparse
 import cmd
 import collections
@@ -15,6 +14,8 @@ import readline
 import shlex
 import sys
 import time
+
+from gostop_database import GostopDB
 
 # =============================================================================
 # Utils.
@@ -75,38 +76,6 @@ def ERR(msg, color=COLORS.RED, exit=False):
 HISTORY_FILE = ".{n}.history".format(n=os.path.splitext(os.path.basename(__file__))[0])
 HISTORY_SIZE = 1000
 
-DEFAULT_DB = ".data.DEFAULT.db"
-
-sql_statements = [ 
-    """CREATE TABLE IF NOT EXISTS players (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            balance INTEGER NOT NULL,
-            name text NOT NULL
-        );""",
-
-    """CREATE TABLE IF NOT EXISTS games (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            dealer_id INTEGER NOT NULL,
-            FOREIGN KEY (dealer_id) REFERENCES players(id)
-        );""",
-
-    """CREATE TABLE IF NOT EXISTS players_game (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            game_id INTEGER NOT NULL,
-            player_id INTEGER NOT NULL,
-            FOREIGN KEY (game_id) REFERENCES games(id),
-            FOREIGN KEY (player_id) REFERENCES players(id)
-        );""",
-
-    """CREATE TABLE IF NOT EXISTS win_points (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_game_id INTEGER NOT NULL,
-            win_type text NOT NULL,
-            points INTEGER NOT NULL,
-            FOREIGN KEY (player_game_id) REFERENCES players_game(id)
-        );""",
-]
-
 def reload_history():
     """
     Reload the command history file.
@@ -140,18 +109,9 @@ class Cli(cmd.Cmd):
         Initialize class.
         """
         cmd.Cmd.__init__(self)
-
-        self.db_con = sqlite3.connect(DEFAULT_DB)
-        self.db_con.row_factory = sqlite3.Row
-
         self.cur_game_id = -1
 
-        cur = self.db_con.cursor()
-        
-        for statement in sql_statements:
-            cur.execute(statement)
-
-        self.db_con.commit()
+        self.gostop_db = GostopDB()
 
         # Load history on start.
         reload_history()
@@ -274,173 +234,6 @@ class Cli(cmd.Cmd):
     # Helper commands.
     #--------------------------------------------------------------------------
 
-    def _insert_new_win_points(self, player_game_id, win_type, num_points):
-        """
-        Insert a new row into win_points table
-        """
-
-        cmd = ''' INSERT INTO win_points(player_game_id, win_type, points)
-                  VALUES(?,?,?) '''
-
-        cur = self.db_con.cursor()
-        cur.execute(cmd, (player_game_id, win_type, num_points))
-
-        self.db_con.commit()
-
-        return cur.lastrowid
-
-    def _insert_new_players_game(self, game_id, player_id):
-        """
-        Insert a new row into players_games
-        """
-
-        cmd = ''' INSERT INTO players_game(game_id, player_id)
-                  VALUES(?,?) '''
-
-        cur = self.db_con.cursor()
-        cur.execute(cmd, (game_id, player_id))
-
-        self.db_con.commit()
-
-        return cur.lastrowid
-
-    def _insert_new_player(self, name):
-        """
-        Insert a new player into the players table
-        """
-
-        cmd = ''' INSERT INTO players(name, balance)
-                  VALUES(?,?) '''
-
-        cur = self.db_con.cursor()
-        cur.execute(cmd, (name, 0))
-
-        self.db_con.commit()
-
-        return cur.lastrowid
-
-    def _insert_new_game(self, dealer_id):
-        """
-        Insert new game into game database
-        """
-
-        cmd = ''' INSERT INTO games(dealer_id) VALUES(?) '''
-        
-        cur = self.db_con.cursor()
-        cur.execute(cmd, (dealer_id, ))
-
-        self.db_con.commit()
-
-        return cur.lastrowid
-
-    def _get_win_points(self, game_id):
-        """
-        Get the information about a specific game by id
-        """
-
-        get_cmd = ''' SELECT name, win_type, points
-                      FROM win_points
-                      JOIN players_game ON win_points.player_game_id = players_game.id
-                      JOIN players ON players_game.player_id = players.id
-                      WHERE game_id=? '''
-
-        cur = self.db_con.cursor()
-        res = cur.execute(get_cmd, (game_id, ))
-        
-        g_obj = res.fetchall()
-        game_dict = [dict(g) for g in g_obj]
-        if len(game_dict) == 0:
-            return None
-
-        return game_dict
-
-    def _get_game_player(self, game_id, player_id):
-        """
-        Get the information about a specific game by id
-        """
-
-        get_cmd = ''' SELECT *
-                      FROM players_game
-                      WHERE game_id=? AND player_id=? '''
-
-        cur = self.db_con.cursor()
-        res = cur.execute(get_cmd, (game_id, player_id))
-        
-        g_obj = res.fetchall()
-        game_player_dict = [dict(g) for g in g_obj]
-        if len(game_player_dict) == 0:
-            return None
-
-        return game_player_dict
-
-    def _get_game_players(self, game_id):
-        """
-        Get the information about a specific game by id
-        """
-
-        get_cmd = ''' SELECT name, player_id
-                      FROM players_game
-                      JOIN players ON players_game.player_id = players.id
-                      WHERE game_id=? '''
-
-        cur = self.db_con.cursor()
-        res = cur.execute(get_cmd, (game_id, ))
-        
-        g_obj = res.fetchall()
-        game_dict = [dict(g) for g in g_obj]
-        if len(game_dict) == 0:
-            return None
-
-        return game_dict
-
-    def _get_game(self, id):
-        """
-        Get the information about a specific game by id
-        """
-
-        get_cmd = ''' SELECT * FROM games WHERE id=? '''
-
-        cur = self.db_con.cursor()
-        res = cur.execute(get_cmd, (id, ))
-        
-        g_obj = res.fetchall()
-        game_dict = [dict(g) for g in g_obj]
-        if len(game_dict) == 0:
-            return None
-
-        return game_dict
-
-    def _get_player(self, name=None, id=None):
-        """
-        Get the information about a specific player by name
-        """
-        cur = self.db_con.cursor()
-
-        if name is not None:
-            get_cmd = ''' SELECT *
-                        FROM players
-                        WHERE name=? '''
-
-            res = cur.execute(get_cmd, (name, ))
-        elif id is not None:
-            get_cmd = ''' SELECT *
-                        FROM players
-                        WHERE id=? '''
-
-            res = cur.execute(get_cmd, (id, ))
-        else:
-            get_cmd = ''' SELECT * FROM players '''
-
-            res = cur.execute(get_cmd)
-
-        p_obj = res.fetchall()
-        players = [dict(p) for p in p_obj]
-
-        if len(players) == 0:
-            return None
-
-        return players
-
     def _calc_game_balance(self, game_id):
         """
         Do a lot of the heavy lifting in this function, 
@@ -448,7 +241,6 @@ class Cli(cmd.Cmd):
 
         return a dictionary of player ids and point deltas
         """
-
 
     #--------------------------------------------------------------------------
     # User cli commands.
@@ -468,7 +260,7 @@ class Cli(cmd.Cmd):
             ERR("There is no currently active game")
             return
 
-        game = self._get_game(self.cur_game_id)
+        game = self.gostop_db._get_game(self.cur_game_id)
         if game is None:
             ERR("Invalid state: saved game idx has been corrupted, please restart")
             return
@@ -476,7 +268,7 @@ class Cli(cmd.Cmd):
         print("Game")
         print(game)
 
-        players_game_data = self._get_game_players(self.cur_game_id)
+        players_game_data = self.gostop_db._get_game_players(self.cur_game_id)
         if players_game_data is None:
             ERR("Invalid state: players data is corrupted, please restart")
             return
@@ -486,7 +278,7 @@ class Cli(cmd.Cmd):
             print(players_game)
 
         print("Points")
-        point_totals = self._get_win_points(self.cur_game_id)
+        point_totals = self.gostop_db._get_win_points(self.cur_game_id)
         if point_totals is not None:
             for point in point_totals:
                 print(point)
@@ -507,22 +299,22 @@ class Cli(cmd.Cmd):
             ERR("There is no currently active game")
             return
         
-        game = self._get_game(self.cur_game_id)
+        game = self.gostop_db._get_game(self.cur_game_id)
         if game is None:
             ERR("Invalid state: saved game idx has been corrupted, please restart")
             return
 
-        winner_player = self._get_player(name=args.player)
+        winner_player = self.gostop_db._get_player(name=args.player)
         if winner_player is None:
             ERR("Unknown player {}".format(args.player))
             return
 
-        winner_player_game = self._get_game_player(self.cur_game_id, winner_player[0]["id"])
+        winner_player_game = self.gostop_db._get_game_player(self.cur_game_id, winner_player[0]["id"])
         if winner_player_game is None:
             ERR("Invalid state: saved game idx has been corrupted, please restart")
             return
 
-        self._insert_new_win_points(winner_player_game[0]["id"], "POINTS", args.points)
+        self.gostop_db._insert_new_win_points(winner_player_game[0]["id"], "POINTS", args.points)
 
     def do_add_first_round_lock(self, line=''):
         """
@@ -539,22 +331,22 @@ class Cli(cmd.Cmd):
             ERR("There is no currently active game")
             return
 
-        game = self._get_game(self.cur_game_id)
+        game = self.gostop_db._get_game(self.cur_game_id)
         if game is None:
             ERR("Invalid state: saved game idx has been corrupted, please restart")
             return
 
-        frl_player = self._get_player(name=args.player)
+        frl_player = self.gostop_db._get_player(name=args.player)
         if frl_player is None:
             ERR("Unknown player {}".format(args.player))
             return
 
-        frl_player_game = self._get_game_player(self.cur_game_id, frl_player[0]["id"])
+        frl_player_game = self.gostop_db._get_game_player(self.cur_game_id, frl_player[0]["id"])
         if frl_player_game is None:
             ERR("Invalid state: saved game idx has been corrupted, please restart")
             return
 
-        self._insert_new_win_points(frl_player_game[0]["id"], "FIRST_ROUND_LOCK", 5)
+        self.gostop_db._insert_new_win_points(frl_player_game[0]["id"], "FIRST_ROUND_LOCK", 5)
 
     def do_add_sell_bonus(self, line=''):
         """
@@ -572,12 +364,12 @@ class Cli(cmd.Cmd):
             ERR("There is no currently active game")
             return
 
-        game = self._get_game(self.cur_game_id)
+        game = self.gostop_db._get_game(self.cur_game_id)
         if game is None:
             ERR("Invalid state: saved game idx has been corrupted, please restart")
             return
 
-        bonus_winner = self._get_player(name=args.player)
+        bonus_winner = self.gostop_db._get_player(name=args.player)
         if bonus_winner is None:
             ERR("Unknown player {}".format(args.player))
             return
@@ -586,12 +378,12 @@ class Cli(cmd.Cmd):
             ERR("Dealer cannot be the bonus winner")
             return
 
-        bonus_winner_player_game = self._get_game_player(self.cur_game_id, bonus_winner[0]["id"])
+        bonus_winner_player_game = self.gostop_db._get_game_player(self.cur_game_id, bonus_winner[0]["id"])
         if bonus_winner_player_game is None:
             ERR("Invalid state: saved game idx has been corrupted, please restart")
             return
 
-        self._insert_new_win_points(bonus_winner_player_game[0]["id"], "SELL", args.bonus)
+        self.gostop_db._insert_new_win_points(bonus_winner_player_game[0]["id"], "SELL", args.bonus)
 
     def do_start_game(self, line=''):
         """
@@ -608,27 +400,27 @@ class Cli(cmd.Cmd):
             return
 
         dealer_name = input("Enter the dealers name: ")
-        dealer = self._get_player(name=dealer_name)
+        dealer = self.gostop_db._get_player(name=dealer_name)
         if dealer is None:
             ERR("Could not find {} in known players, cannot start game".format(dealer_name))
             return
 
         # Create a new game and save off the game_id
-        self.cur_game_id = self._insert_new_game(dealer[0]["id"])
+        self.cur_game_id = self.gostop_db._insert_new_game(dealer[0]["id"])
 
         # Create a new players_game for the dealer
-        self._insert_new_players_game(self.cur_game_id, dealer[0]["id"])
+        self.gostop_db._insert_new_players_game(self.cur_game_id, dealer[0]["id"])
 
         try:
             num_players = 1
             while num_players < 4:
                 player_name = input("Enter a player's name (CTRL+C when done): ")
-                player = self._get_player(name=player_name)
+                player = self.gostop_db._get_player(name=player_name)
                 if player is None:
                     ERR("Could not find {} in known players, not adding".format(player_name))
                     continue
 
-                self._insert_new_players_game(self.cur_game_id, player[0]["id"])
+                self.gostop_db._insert_new_players_game(self.cur_game_id, player[0]["id"])
                 num_players = num_players + 1
                 
         except KeyboardInterrupt:
@@ -649,7 +441,7 @@ class Cli(cmd.Cmd):
         except SystemExit:
             return
 
-        players = self._get_player()
+        players = self.gostop_db._get_player()
         if players is not None:
             for player in players:
                 print(player)
@@ -665,18 +457,19 @@ class Cli(cmd.Cmd):
         """
         parser = argparse.ArgumentParser(prog="add_player", description="Add a new player")
         parser.add_argument("player", help="The name of the user to add.")
+        parser.add_argument("username", help="The username of the user to add.")
         try:
             args = parser.parse_args(shlex.split(line))
         except SystemExit:
             return
 
-        player = self._get_player(name=args.player)
+        player = self.gostop_db._get_player(name=args.username)
         if player is not None:
             ERR("Player {} already exists".format(args.player))
             return 
         
-        self._insert_new_player(args.player)
-        LOG("{} added".format(args.player))
+        self.gostop_db._insert_new_player(args.player, args.username)
+        LOG("{} ({}) added".format(args.player, args.username))
 
 def main(argv=None):
     cli = Cli()
