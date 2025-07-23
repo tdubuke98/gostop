@@ -14,7 +14,8 @@ sql_statements = [
             balance INTEGER NOT NULL,
             name text NOT NULL,
             username text NOT NULL,
-            is_active INTEGER NOT NULL DEFAULT 1
+            password text,
+            is_admin INTEGER NOT NULL DEFAULT 0
         );""",
 
     """CREATE TABLE IF NOT EXISTS games (
@@ -71,6 +72,27 @@ class GostopDB():
         self.db_con.commit()
 
         return cur.lastrowid
+
+    def _get_role(self, role_id=None):
+        """
+        Get a role or all roles from the database
+        """
+        cur = self.db_con.cursor()
+
+        if role_id is None:
+            cmd = ''' SELECT * FROM roles '''
+            res = cur.execute(cmd)
+        else:
+            cmd = ''' SELECT * FROM roles WHERE id=? '''
+            res = cur.execute(cmd, (role_id, ))
+
+        r_obj = res.fetchall()
+        role_dict = [dict(r) for r in r_obj]
+        
+        if len(role_dict) == 0:
+            return None
+
+        return role_dict
 
     def _insert_new_role(self, game_id, player_id, role):
         """
@@ -241,19 +263,65 @@ class GostopDB():
 
         return game_dict
 
-    def _get_game(self, game_id):
+    def _get_game(self, game_id=None):
         """
         Get the information about a specific game by id
         """
 
-        get_cmd = ''' SELECT player_id, name, username, role, event_type, points
-                      FROM roles
-                      JOIN games ON roles.game_id = games.id
-                      JOIN players ON roles.player_id = players.id
-                      JOIN points_events ON points_events.role_id = roles.id
-                      WHERE games.id=? '''
+        cur = self.db_con.cursor()
+
+        if game_id is None:
+            get_cmd = ''' SELECT * FROM games '''
+            res = cur.execute(get_cmd)
+        else:
+            get_cmd = ''' SELECT * FROM games WHERE id=? '''
+            res = cur.execute(get_cmd, (game_id, ))
+        
+        g_obj = res.fetchall()
+        game_dict = [dict(g) for g in g_obj]
+        if len(game_dict) == 0:
+            return None
+
+        return game_dict
+
+    def _get_win_deal_data(self):
+        """
+        Get the percentage where the dealer is also the winner
+        """
+        cur = self.db_con.cursor()
+
+        cmd = ''' SELECT
+                    ROUND(
+                        CAST(SUM(CASE WHEN roles.player_id = games.winner_id THEN 1 ELSE 0 END) AS FLOAT)
+                        / COUNT(*) * 100, 2) AS dealer_win_percentage
+                    FROM games
+                    JOIN roles ON games.id = roles.game_id
+                    WHERE roles.role = 'DEALER' '''
+
+        res = cur.execute(cmd)
+
+        s_obj = res.fetchall()
+        stats_dict = [dict(s) for s in s_obj]
+        if len(stats_dict) == 0:
+            return None
+
+        return stats_dict[0]
+
+
+    def _get_game_data(self, game_id):
+        """
+        Get the information about a specific game by id
+        """
 
         cur = self.db_con.cursor()
+
+        get_cmd = ''' SELECT player_id, game_id, name, username, role, event_type, points
+                    FROM roles
+                    JOIN games ON roles.game_id = games.id
+                    JOIN players ON roles.player_id = players.id
+                    JOIN points_events ON points_events.role_id = roles.id
+                    WHERE games.id=? '''
+
         res = cur.execute(get_cmd, (game_id, ))
         
         g_obj = res.fetchall()

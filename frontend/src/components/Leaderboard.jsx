@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Award, ArrowBigRight, UserPlus, UserRoundCog } from "lucide-react";
 import { usePlayers } from "../context/PlayerContext";
 
-export default function Leaderboard( {setShowNewPlayer, setEditPlayerId} ) {
+export default function Leaderboard( {setShowNewPlayer, setEditPlayerId, isAuth} ) {
   const { players, deletePlayer } = usePlayers();
 
   return (
@@ -12,12 +12,14 @@ export default function Leaderboard( {setShowNewPlayer, setEditPlayerId} ) {
           Leaderboard
         </h2>
 
-        <button
-          onClick={() => setShowNewPlayer(true)}
-          className="bg-green-600 hover:bg-green-700 text-white text-center shadow-lg rounded text-xl px-4 py-2"
-        >
-          <UserPlus className="w-5 h-5" />
-        </button>
+        {isAuth && (
+          <button
+            onClick={() => setShowNewPlayer(true)}
+            className="bg-green-600 hover:bg-green-700 text-white text-center shadow-lg rounded text-xl px-4 py-2"
+          >
+            <UserPlus className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col overflow-y-auto overflow-x-auto rounded-lg">
@@ -27,7 +29,7 @@ export default function Leaderboard( {setShowNewPlayer, setEditPlayerId} ) {
               <td scope="col" className="px-6 py-2">Place</td>
               <td scope="col" className="px-6 py-2">Name</td>
               <td scope="col" className="px-6 py-2">Points</td>
-              <td scope="col" className="px-6 py-2">Remove</td>
+              {isAuth && (<td scope="col" className="px-6 py-2">Edit</td>)}
             </tr>
           </thead>
           <tbody>
@@ -59,14 +61,16 @@ export default function Leaderboard( {setShowNewPlayer, setEditPlayerId} ) {
                      </div>
                    </td>
                    <td className="px-6 py-3"> {player.balance} </td>
-                   <td className="px-6 py-3">
-                     <button
-                       onClick={() => setEditPlayerId(player.id)}
-                       className="bg-blue-500 hover:bg-blue-600 content-center text-white rounded px-4 py-2"
-                     >
-                       <UserRoundCog className="w-5 h-5" />
-                     </button>
-                    </td>
+                   {isAuth && (
+                     <td className="px-6 py-3">
+                       <button
+                         onClick={() => setEditPlayerId(player.id)}
+                         className="bg-blue-500 hover:bg-blue-600 content-center text-white rounded px-4 py-2"
+                       >
+                         <UserRoundCog className="w-5 h-5" />
+                       </button>
+                      </td>
+                    )}
                   </tr>
                );
             })}

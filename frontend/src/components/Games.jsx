@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useGames } from "../context/GameContext";
 import { Trash } from "lucide-react";
 
-export default function Games({ setShowNewGame }) {
+export default function Games({ setShowNewGame, isAuth }) {
   const { games, deleteGame } = useGames();
 
   return (
@@ -11,13 +11,15 @@ export default function Games({ setShowNewGame }) {
         <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
           Games
         </h2>
-
-        <button
-          onClick={() => setShowNewGame(true)}
-          className="bg-green-600 hover:bg-green-700 text-white shadow-lg rounded text-xl px-3 py-0.5"
-        >
-          + New Game
-        </button>
+        
+        {isAuth && (
+          <button
+            onClick={() => setShowNewGame(true)}
+            className="bg-green-600 hover:bg-green-700 text-white shadow-lg rounded text-xl px-3 py-0.5"
+          >
+            + New Game
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col overflow-y-auto rounded-lg gap-4">
@@ -30,18 +32,24 @@ export default function Games({ setShowNewGame }) {
               <span className="bg-green-600 text-white text-sm font-bold px-2 py-1 rounded shadow">
                 Winner: {game.winner_name}
               </span>
-              <button
-                onClick={(e) => {
-                  deleteGame(game.game_id);
-                }}
-                className="bg-red-500 hover:bg-red-600 content-center text-white rounded px-4 py-2"
-              >
-                <Trash className="w-5 h-5" />
-              </button>
+
+              {isAuth && (
+                <button
+                  onClick={(e) => {
+                    deleteGame(game.game_id);
+                  }}
+                  className="bg-red-500 hover:bg-red-600 content-center text-white rounded px-4 py-2"
+                >
+                  <Trash className="w-5 h-5" />
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col pl-2 gap-2">
-              {game.players.map((player, idx) => (
+              {game.players
+                .slice()
+                .sort((a, b) => b.point_delta - a.point_delta)
+                .map((player, idx) => (
                 <div
                   key={idx}
                   className="grid grid-cols-3 items-center bg-gray-800 rounded px-3 py-1"

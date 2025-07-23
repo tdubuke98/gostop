@@ -6,7 +6,7 @@ import NewGameDealer from "./NewGameDealer";
 import NewGameSeller from "./NewGameSeller";
 import NewGameScore from "./NewGameScore";
 import NewGameConfirm from "./NewGameConfirm";
-import config from "../utils/api.js";
+import config, { sendREST } from "../utils/api.js";
 
 export const WizardPage = {
   SELECT_PLAYERS: "SELECT_PLAYERS",
@@ -18,7 +18,7 @@ export const WizardPage = {
 
 export default function NewGameWizard({ setShowNewGame }) {
   const { players } = usePlayers();
-  const { createGame, fetchNewGame } = useGames();
+  const { createGame, updateGameBalance, fetchNewGame } = useGames();
 
   const [currentPage, setCurrentPage] = useState(WizardPage.SELECT_PLAYERS);
   const [nextDisabled, setNextDisabled] = useState(false);
@@ -42,16 +42,7 @@ export default function NewGameWizard({ setShowNewGame }) {
         role = "SELLER";
       }
 
-      const roleRes = await fetch(`${config.backendURI}/roles/${gameId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: role, 
-          player_id: player.id,
-        }),
-      });
-
-      const roleId = await roleRes.json();
+      const roleId = await sendREST(`/roles/${gameId}`, { role: role, player_id: player.id }, "POST" );
 
       updatedPlaying = updatedPlaying.map(p =>
         player.id === p.id
@@ -63,53 +54,24 @@ export default function NewGameWizard({ setShowNewGame }) {
     // If we have a first round lock, we should send updates for all other players
     for (const player of updatedPlaying) {
       if (player.frl) {
-        const peventsRes = await fetch(`${config.backendURI}/points_events/${player.roleId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event_type: "FIRST_ROUND_LOCK",
-            points: 5
-          }),
-        });
+        await sendREST(`/points_events/${player.roleId}`, { event_type: "FIRST_ROUND_LOCK", points: 5 }, "POST" );
       }
 
       if (player.id === winner.id) {
-        const peventsRes = await fetch(`${config.backendURI}/points_events/${player.roleId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event_type: "WIN",
-            points: winner.points
-          }),
-        });
-
+        await sendREST(`/points_events/${player.roleId}`, { event_type: "WIN", points: winner.points }, "POST" );
         continue;
       }
 
       if (player.id === seller.id && seller.points > 0) {
-        const peventsRes = await fetch(`${config.backendURI}/points_events/${player.roleId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event_type: "SELL",
-            points: seller.points
-          }),
-        });
-
+        await sendREST(`/points_events/${player.roleId}`, { event_type: "SELL", points: seller.points }, "POST" );
         continue;
       }
 
-      const peventsRes = await fetch(`${config.backendURI}/points_events/${player.roleId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event_type: "LOSS_MULTIPLIER",
-          points: player.multiplier
-        }),
-      });
+      await sendREST(`/points_events/${player.roleId}`, { event_type: "LOSS_MULTIPLIER", points: player.multiplier }, "POST" );
     }
 
-    fetchNewGame(gameId);
+    await updateGameBalance(gameId);
+    await fetchNewGame(gameId);
 
     // Reset the game state
     setPlaying([]);

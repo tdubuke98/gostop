@@ -1,89 +1,55 @@
 // PlayerContext.js
 import React, { useContext, createContext, useState, useEffect } from "react";
-import config from "../utils/api.js";
+import config, { sendREST } from "../utils/api.js";
 
 export const PlayerContext = createContext();
 
 export const PlayerProvider = ({ children }) => {
   const [players, setPlayers] = useState([]);
 
-  const fetchAllPlayers = () => {
-    fetch(`${config.backendURI}/players`)
-      .then((res) => res.json())
-      .then((data) => setPlayers(data))
-      .catch((err) => console.error("Failed to fetch players:", err));
-  };
-
-  useEffect(() => {
-    fetchAllPlayers();
-  }, []);
-
-  const deletePlayer = async (id) => {
+  async function fetchAllPlayers() {
     try {
-      const res = await fetch(`${config.backendURI}/players/${id}`, { method: "DELETE" });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to delete player");
-      }
-
-      setPlayers(players.filter((p) => p.id !== id))
-    } catch (err) {
-      throw err;
+      const data = await sendREST("/players");
+      setPlayers(data);
+    } catch (error) {
+      console.error("Fetching players failed:", error);
     }
   };
 
   const addPlayer = async (newPlayer, newPlayerUsername) => {
     try {
-      const res = await fetch(`${config.backendURI}/players`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newPlayer, username: newPlayerUsername }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        // Backend returned error (e.g. 400 duplicate username)
-        throw new Error(data.error || "Failed to add player");
-      }
-
+      const data = await sendREST("/players", { name: newPlayer, username: newPlayerUsername }, "POST")
       setPlayers([...players, data]);
     } catch (err) {
       console.error("Add player failed:", err);
       throw err;
     }
   };
-    
+
+  const deletePlayer = async (id) => {
+    try {
+      const data = await sendREST(`/players/${id}`, undefined, "DELETE")
+      setPlayers(players.filter((p) => p.id !== id))
+    } catch (err) {
+      console.error("Delete player failed:", err);
+      throw err;
+    }
+  };
+
   const editPlayer = async (id, updatedName, updatedUsername) => {
     try {
-      const res = await fetch(`${config.backendURI}/players/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: updatedName,
-          username: updatedUsername,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        // Backend returned error (e.g. duplicate username)
-        throw new Error(data.error || "Failed to edit player");
-      }
-
-      // Update local state by replacing the edited player
+      const data = await sendREST(`/players/${id}`, { name: updatedName, username: updatedUsername }, "PATCH");
       setPlayers(players.map((p) => (p.id === id ? data : p)));
-
-      return data; // return updated player for any further usage
     } catch (err) {
       console.error("Edit player failed:", err);
       throw err;
     }
   };
 
+  useEffect(() => {
+    fetchAllPlayers();
+  }, []);
+    
   return (
     <PlayerContext.Provider value={{ players, addPlayer, deletePlayer, editPlayer, fetchAllPlayers }}>
       {children}
