@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import config, { sendREST } from "../utils/api.js";
+import { sendREST } from "../utils/api.js";
 
 export default function StatsPage() {
   const [stats, setStats] = useState([]);
 
   async function fetchAllStats() {
     try {
-      const data = await sendREST("/stats");
+      const data = await sendREST("/api/stats");
       setStats(data);
     } catch (error) {
       console.error("Fetching stats failed:", error);

@@ -6,7 +6,7 @@ import NewGameDealer from "./NewGameDealer";
 import NewGameSeller from "./NewGameSeller";
 import NewGameScore from "./NewGameScore";
 import NewGameConfirm from "./NewGameConfirm";
-import config, { sendREST } from "../utils/api.js";
+import { sendREST } from "../utils/api.js";
 
 export const WizardPage = {
   SELECT_PLAYERS: "SELECT_PLAYERS",
@@ -42,7 +42,7 @@ export default function NewGameWizard({ setShowNewGame }) {
         role = "SELLER";
       }
 
-      const roleId = await sendREST(`/roles/${gameId}`, { role: role, player_id: player.id }, "POST" );
+      const roleId = await sendREST(`/api/roles/${gameId}`, { role: role, player_id: player.id }, "POST" );
 
       updatedPlaying = updatedPlaying.map(p =>
         player.id === p.id
@@ -54,20 +54,20 @@ export default function NewGameWizard({ setShowNewGame }) {
     // If we have a first round lock, we should send updates for all other players
     for (const player of updatedPlaying) {
       if (player.frl) {
-        await sendREST(`/points_events/${player.roleId}`, { event_type: "FIRST_ROUND_LOCK", points: 5 }, "POST" );
+        await sendREST(`/api/points_events/${player.roleId}`, { event_type: "FIRST_ROUND_LOCK", points: 5 }, "POST" );
       }
 
       if (player.id === winner.id) {
-        await sendREST(`/points_events/${player.roleId}`, { event_type: "WIN", points: winner.points }, "POST" );
+        await sendREST(`/api/points_events/${player.roleId}`, { event_type: "WIN", points: winner.points }, "POST" );
         continue;
       }
 
       if (player.id === seller.id && seller.points > 0) {
-        await sendREST(`/points_events/${player.roleId}`, { event_type: "SELL", points: seller.points }, "POST" );
+        await sendREST(`/api/points_events/${player.roleId}`, { event_type: "SELL", points: seller.points }, "POST" );
         continue;
       }
 
-      await sendREST(`/points_events/${player.roleId}`, { event_type: "LOSS_MULTIPLIER", points: player.multiplier }, "POST" );
+      await sendREST(`/api/points_events/${player.roleId}`, { event_type: "LOSS_MULTIPLIER", points: player.multiplier }, "POST" );
     }
 
     await updateGameBalance(gameId);

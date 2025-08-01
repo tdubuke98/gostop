@@ -166,6 +166,23 @@ class GostopDB():
 
         self.db_con.commit()
 
+    def _get_num_games(self):
+        """
+        Get the information about a specific game by id
+        """
+
+        get_cmd = ''' SELECT COUNT(*) AS total_games FROM games '''
+
+        cur = self.db_con.cursor()
+        res = cur.execute(get_cmd)
+        
+        g_obj = res.fetchall()
+        game_dict = [dict(g) for g in g_obj]
+        if len(game_dict) == 0:
+            return None
+
+        return game_dict
+
     def _get_game_players(self, game_id):
         """
         Get the information about a specific game by id

@@ -1,11 +1,7 @@
-const config = {
-    backendURI: "http://localhost:8000",
-};
-
-export default config;
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export async function sendREST(path, json = null, method = "GET") {
-  const url = `${config.backendURI}${path}`;
+  const url = `${API_BASE_URL}${path}`;
   const options = { 
     method,
     credentials: "include",
@@ -59,7 +55,7 @@ export async function sendREST(path, json = null, method = "GET") {
 
 async function refreshToken() {
   try {
-    const response = await fetch(`${config.backendURI}/refresh`, {
+    const response = await fetch(`${API_BASE_URL}/api/refresh`, {
       method: "POST",
       credentials: "include"
     });
