@@ -252,8 +252,9 @@ class GostopFlask():
             """
             Get database stats
             """
-            deal_win_per = self.gostop_db._get_win_deal_data()
-            return jsonify(deal_win_per), 201
+            deal_win_per = self.gostop_db._get_win_deal_data().get("dealer_win_percentage")
+            player_games = self.gostop_db._get_player_games_played()
+            return jsonify({"dealer_win_percentage": deal_win_per, "players": player_games}), 201
 
         @self.app.route("/points_events/<int:role_id>", methods=["POST"])
         @token_required

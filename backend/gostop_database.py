@@ -301,6 +301,41 @@ class GostopDB():
 
         return game_dict
 
+    def _get_player_games_played(self):
+        cur = self.db_con.cursor()
+
+        cmd = '''
+                SELECT 
+                    p.id,
+                    p.name,
+                    COUNT(DISTINCT r.game_id) AS games_played,
+                    COUNT(DISTINCT g.id) AS games_won,
+                    ROUND(
+                        100.0 * COUNT(DISTINCT g.id) / NULLIF(COUNT(DISTINCT r.game_id), 0),
+                        2
+                    ) AS win_percentage,
+                    ROUND(
+                        1.0 * SUM(CASE WHEN g.winner_id = p.id THEN r.point_delta ELSE 0 END) /
+                        NULLIF(COUNT(DISTINCT g.id), 0),
+                        2
+                    ) AS avg_points_per_win
+                FROM players p
+                LEFT JOIN roles r ON p.id = r.player_id
+                LEFT JOIN games g ON g.id = r.game_id AND g.winner_id = p.id
+                GROUP BY p.id, p.name
+                ORDER BY games_played DESC;
+                '''
+
+        res = cur.execute(cmd)
+
+        s_obj = res.fetchall()
+        stats_dict = [dict(s) for s in s_obj]
+        if len(stats_dict) == 0:
+            return None
+
+        return stats_dict
+
+
     def _get_win_deal_data(self):
         """
         Get the percentage where the dealer is also the winner
