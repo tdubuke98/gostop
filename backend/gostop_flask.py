@@ -200,7 +200,7 @@ class GostopFlask():
                 self.gostop_db._update_role_point_delta(role.get("id"), 0)
 
     def register_routes(self):
-        @self.app.route("/api/refresh", methods=["POST"])
+        @self.app.route("/refresh", methods=["POST"])
         def refresh():
             """
             Refresh the access tokens
@@ -228,7 +228,7 @@ class GostopFlask():
 
             return response, 200
 
-        @self.app.route("/api/login", methods=["POST"])
+        @self.app.route("/login", methods=["POST"])
         def login():
             """
             Authenticate and send a token to submit updates
@@ -247,7 +247,7 @@ class GostopFlask():
 
             return response, 200
 
-        @self.app.route("/api/stats", methods=["GET"])
+        @self.app.route("/stats", methods=["GET"])
         def get_stats():
             """
             Get database stats
@@ -255,7 +255,7 @@ class GostopFlask():
             deal_win_per = self.gostop_db._get_win_deal_data()
             return jsonify(deal_win_per), 201
 
-        @self.app.route("/api/points_events/<int:role_id>", methods=["POST"])
+        @self.app.route("/points_events/<int:role_id>", methods=["POST"])
         @token_required
         def add_points_event(role_id):
             """
@@ -269,7 +269,7 @@ class GostopFlask():
 
             return jsonify(points_event_id), 201
 
-        @self.app.route("/api/roles/<int:game_id>", methods=["POST"])
+        @self.app.route("/roles/<int:game_id>", methods=["POST"])
         @token_required
         def add_role(game_id):
             """
@@ -283,7 +283,7 @@ class GostopFlask():
 
             return jsonify(role_id), 201
 
-        @self.app.route("/api/num_games", methods=["GET"])
+        @self.app.route("/num_games", methods=["GET"])
         def get_num_game():
             """
             Get the number of games from the database
@@ -294,7 +294,7 @@ class GostopFlask():
 
             return jsonify(num_game[0].get("total_games")), 200
 
-        @self.app.route("/api/games/<int:game_id>", methods=["DELETE"])
+        @self.app.route("/games/<int:game_id>", methods=["DELETE"])
         @token_required
         def delete_game(game_id):
             """
@@ -312,7 +312,7 @@ class GostopFlask():
             self.gostop_db._delete_game(game_id)
             return "", 200
 
-        @self.app.route("/api/update", methods=["PATCH"])
+        @self.app.route("/update", methods=["PATCH"])
         @token_required
         def update_balances():
             """
@@ -327,7 +327,7 @@ class GostopFlask():
 
             return jsonify(""), 200
 
-        @self.app.route("/api/update/<int:game_id>", methods=["PATCH"])
+        @self.app.route("/update/<int:game_id>", methods=["PATCH"])
         @token_required
         def update_balance(game_id):
             """
@@ -337,7 +337,7 @@ class GostopFlask():
 
             return "", 200
 
-        @self.app.route("/api/games/<int:game_id>", methods=["GET"])
+        @self.app.route("/games/<int:game_id>", methods=["GET"])
         def get_game(game_id):
             """
             Get a nice display struct with a specific game in it
@@ -348,7 +348,7 @@ class GostopFlask():
 
             return jsonify(game_display_data), 201
 
-        @self.app.route("/api/games", methods=["GET"])
+        @self.app.route("/games", methods=["GET"])
         def get_games():
             """
             Get a nice display struct with all the games in it
@@ -359,7 +359,7 @@ class GostopFlask():
 
             return jsonify(games), 201
 
-        @self.app.route("/api/games", methods=["POST"])
+        @self.app.route("/games", methods=["POST"])
         @token_required
         def add_game():
             """
@@ -372,7 +372,7 @@ class GostopFlask():
 
             return jsonify(game_id), 201
 
-        @self.app.route("/api/players/<int:player_id>", methods=["DELETE"])
+        @self.app.route("/players/<int:player_id>", methods=["DELETE"])
         @token_required
         def delete_player(player_id):
             """
@@ -388,13 +388,13 @@ class GostopFlask():
             self.gostop_db._delete_player(player_id)
             return "", 200
 
-        @self.app.route("/api/players/<int:player_id>", methods=["PATCH"])
+        @self.app.route("/players/<int:player_id>", methods=["PATCH"])
         @token_required
         def update_player(player_id):
             data = request.get_json()
             return "", 200
 
-        @self.app.route("/api/players", methods=["GET"])
+        @self.app.route("/players", methods=["GET"])
         def get_players():
             players = self.gostop_db._get_player()
             if players is None:
@@ -402,7 +402,7 @@ class GostopFlask():
 
             return jsonify(players)
 
-        @self.app.route("/api/players", methods=["POST"])
+        @self.app.route("/players", methods=["POST"])
         @token_required
         def add_player():
             data = request.get_json()
@@ -433,6 +433,3 @@ class GostopFlask():
 
 api = GostopFlask()
 app = api.app  # This is what Gunicorn needs
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)

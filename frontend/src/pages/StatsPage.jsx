@@ -6,7 +6,7 @@ export default function StatsPage() {
 
   async function fetchAllStats() {
     try {
-      const data = await sendREST("/api/stats");
+      const data = await sendREST("/stats");
       setStats(data);
     } catch (error) {
       console.error("Fetching stats failed:", error);

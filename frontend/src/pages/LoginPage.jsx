@@ -12,7 +12,7 @@ export default function LoginPage({ setIsAuth, isAuth }) {
     setError(null);
 
     try {
-      const result = await sendREST("/api/login", { username, password }, "POST");
+      const result = await sendREST("/login", { username, password }, "POST");
       console.log("Login success:", result);
       localStorage.setItem("token", result.access_token);
       setIsAuth(true);

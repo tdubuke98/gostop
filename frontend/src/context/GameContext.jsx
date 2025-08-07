@@ -12,7 +12,7 @@ export const GameProvider = ({ children }) => {
 
   async function fetchAllGames() {
     try {
-      const data = await sendREST("/api/games");
+      const data = await sendREST("/games");
       setGames(data);
     } catch (error) {
       console.error("Fetching games failed:", error);
@@ -21,7 +21,7 @@ export const GameProvider = ({ children }) => {
 
   async function fetchNumGames() {
     try {
-      const data = await sendREST("/api/num_games");
+      const data = await sendREST("/num_games");
       setNumGames(data);
     } catch (error) {
       console.error("Fetching number of games failed:", error);
@@ -30,7 +30,7 @@ export const GameProvider = ({ children }) => {
 
   const deleteGame = async (id) => {
     try {
-      const data = await sendREST(`/api/games/${id}`, undefined, "DELETE")
+      const data = await sendREST(`/games/${id}`, undefined, "DELETE")
       setGames(games.filter((g) => g.game_id !== id));
     } catch (err) {
       console.error("Delete game failed:", err);
@@ -43,7 +43,7 @@ export const GameProvider = ({ children }) => {
 
   const createGame = async (winner_id) => {
     try {
-      const data = await sendREST("/api/games", { winner_id: winner_id }, "POST")
+      const data = await sendREST("/games", { winner_id: winner_id }, "POST")
       return data;
     } catch (err) {
       console.error("Create game failed:", err);
@@ -53,7 +53,7 @@ export const GameProvider = ({ children }) => {
 
   async function reloadBalances() {
     try {
-      await sendREST("/api/update", undefined, "PATCH")
+      await sendREST("/update", undefined, "PATCH")
     } catch (err) {
       console.error("Reload balances failed:", err);
       throw err;
@@ -62,7 +62,7 @@ export const GameProvider = ({ children }) => {
 
   const updateGameBalance = async (gameId) => {
     try {
-      await sendREST(`/api/update/${gameId}`, undefined, "PATCH")
+      await sendREST(`/update/${gameId}`, undefined, "PATCH")
     } catch (err) {
       console.error("Update game balances failed:", err);
       throw err;
@@ -71,7 +71,7 @@ export const GameProvider = ({ children }) => {
 
   const fetchNewGame = async (gameId) => {
     try {
-      const game = await sendREST(`/api/games/${gameId}`, undefined, "GET")
+      const game = await sendREST(`/games/${gameId}`, undefined, "GET")
       setGames([...game, ...games])
     } catch (err) {
       console.error("Create game failed:", err);
