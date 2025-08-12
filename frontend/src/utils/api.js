@@ -44,7 +44,7 @@ export async function sendREST(path, json = null, method = "GET") {
     if (contentType && contentType.includes("application/json")) {
       return await response.json();
     } else {
-      return null;
+      return await response.text();
     }
 
   } catch (error) {

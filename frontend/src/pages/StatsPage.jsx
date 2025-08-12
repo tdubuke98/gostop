@@ -6,11 +6,17 @@ export default function StatsPage() {
     dealer_win_percentage: 0,
     players: []
   });
+  const [svgMarkup, setSvgMarkup] = useState("");
 
   async function fetchAllStats() {
     try {
       const data = await sendREST("/stats");
       setStats(data);
+
+      // Fetch SVG as raw text
+      const svgResponse = await sendREST("/player.svg");
+      console.log(svgResponse);
+      setSvgMarkup(svgResponse);
     } catch (error) {
       console.error("Fetching stats failed:", error);
     }
@@ -59,6 +65,13 @@ export default function StatsPage() {
           </div>
         </div>
 
+        {/* Player Points Over Time SVG */}
+        {svgMarkup && (
+          <div
+            className="bg-white p-4 rounded-lg shadow-md overflow-x-auto"
+            dangerouslySetInnerHTML={{ __html: svgMarkup }}
+          />
+        )}
       </div>
     </div>
   );

@@ -73,6 +73,32 @@ class GostopDB():
 
         return cur.lastrowid
 
+    def _get_player_over_time(self):
+        """
+        Get player over time point deltas
+        """
+        cur = self.db_con.cursor()
+        cmd = '''
+            SELECT 
+                r.player_id,
+                p.name AS player_name,
+                g.created_at,
+                r.point_delta
+            FROM roles r
+            JOIN games g ON r.game_id = g.id
+            JOIN players p ON r.player_id = p.id
+            ORDER BY g.created_at
+            '''
+
+        res = cur.execute(cmd)
+        r_obj = res.fetchall()
+        po_dict = [dict(r) for r in r_obj]
+
+        if len(po_dict) == 0:
+            return None
+
+        return po_dict
+
     def _get_role(self, role_id=None):
         """
         Get a role or all roles from the database

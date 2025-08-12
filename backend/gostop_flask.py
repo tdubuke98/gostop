@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import enum
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from gostop_database import GostopDB
 import jwt
@@ -9,6 +9,12 @@ import bcrypt
 import datetime
 from functools import wraps
 import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from scipy.interpolate import make_interp_spline
+import numpy as np
+import io
 
 ALGORITHM = "HS256"
 RAW_PASSWORD = os.getenv("PASSWORD", "admin1234")
@@ -255,6 +261,47 @@ class GostopFlask():
             deal_win_per = self.gostop_db._get_win_deal_data().get("dealer_win_percentage")
             player_games = self.gostop_db._get_player_games_played()
             return jsonify({"dealer_win_percentage": deal_win_per, "players": player_games}), 201
+
+        @self.app.route("/player.svg", methods=["GET"])
+        def get_player_svg():
+            """
+            Get SVG of player score over time, handling multiple events in the same day
+            """
+            player_data = self.gostop_db._get_player_over_time()
+
+            df = pd.DataFrame(player_data)
+
+            # Ensure datetime type, preserving both date and time
+            df["created_at"] = pd.to_datetime(df["created_at"])
+
+            plt.figure(figsize=(15, 12))
+
+            for player, group in df.groupby("player_name"):
+                # Sort by exact datetime
+                group = group.sort_values("created_at")
+
+                # Cumulative sum of points
+                group["cumulative_points"] = group["point_delta"].cumsum()
+
+                # Plot keeping datetime resolution (date + time)
+                plt.plot(group["created_at"], group["cumulative_points"], marker="o", label=player)
+
+            plt.title("Player Points Over Time")
+            plt.xlabel("Date & Time")
+            plt.ylabel("Cumulative Points")
+            plt.legend()
+            plt.grid(True)
+
+            # Show both date and time on the x-axis
+            plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+            plt.gcf().autofmt_xdate()
+
+            # Save to in-memory SVG
+            svg_io = io.StringIO()
+            plt.savefig(svg_io, format="svg", bbox_inches="tight")
+            plt.close()
+
+            return Response(svg_io.getvalue(), mimetype="image/svg+xml")
 
         @self.app.route("/points_events/<int:role_id>", methods=["POST"])
         @token_required
