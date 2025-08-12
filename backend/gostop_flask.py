@@ -272,29 +272,29 @@ class GostopFlask():
             df = pd.DataFrame(player_data)
 
             # Ensure datetime type, preserving both date and time
-            df["created_at"] = pd.to_datetime(df["created_at"])
+            # df["created_at"] = pd.to_datetime(df["created_at"])
 
             plt.figure(figsize=(15, 12))
 
             for player, group in df.groupby("player_name"):
                 # Sort by exact datetime
-                group = group.sort_values("created_at")
+                group = group.sort_values("game_id")
 
                 # Cumulative sum of points
                 group["cumulative_points"] = group["point_delta"].cumsum()
 
                 # Plot keeping datetime resolution (date + time)
-                plt.plot(group["created_at"], group["cumulative_points"], marker="o", label=player)
+                plt.plot(group["game_id"], group["cumulative_points"], marker="o", label=player)
 
             plt.title("Player Points Over Time")
-            plt.xlabel("Date & Time")
+            plt.xlabel("Game ID")
             plt.ylabel("Cumulative Points")
             plt.legend()
             plt.grid(True)
 
             # Show both date and time on the x-axis
-            plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-            plt.gcf().autofmt_xdate()
+            # plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+            # plt.gcf().autofmt_xdate()
 
             # Save to in-memory SVG
             svg_io = io.StringIO()
