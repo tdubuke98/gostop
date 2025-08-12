@@ -55,7 +55,7 @@ export async function sendREST(path, json = null, method = "GET") {
 
 async function refreshToken() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/refresh`, {
+    const response = await fetch(`${API_BASE_URL}/refresh`, {
       method: "POST",
       credentials: "include"
     });
