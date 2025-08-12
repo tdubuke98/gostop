@@ -1,8 +1,8 @@
-Flask==3.0.3
-Flask_Cors==5.0.0
-PyJWT==2.9.0
-bcrypt==4.3.0
-gunicorn==23.0.0
-pandas==2.0.3
-matplotlib==3.7.5
-scipy==1.10.1
+Flask
+Flask_Cors
+PyJWT
+bcrypt
+gunicorn
+pandas
+matplotlib
+scipy
