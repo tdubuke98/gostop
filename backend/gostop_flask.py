@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import enum
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from gostop_database import GostopDB
@@ -11,9 +10,6 @@ from functools import wraps
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from scipy.interpolate import make_interp_spline
-import numpy as np
 import io
 
 ALGORITHM = "HS256"
@@ -265,36 +261,37 @@ class GostopFlask():
         @self.app.route("/player.svg", methods=["GET"])
         def get_player_svg():
             """
-            Get SVG of player score over time, handling multiple events in the same day
+            Get SVG of player score over time, handling multiple events in the same day,
+            and normalize game IDs so there are no gaps in the x-axis.
             """
             player_data = self.gostop_db._get_player_over_time()
-
             df = pd.DataFrame(player_data)
 
-            # Ensure datetime type, preserving both date and time
-            # df["created_at"] = pd.to_datetime(df["created_at"])
+            # Sort globally by game_id
+            df = df.sort_values("game_id").reset_index(drop=True)
 
-            plt.figure(figsize=(15, 12))
+            # Create a mapping from actual game_id to a normalized sequential ID
+            unique_game_ids = df["game_id"].unique()
+            id_mapping = {old_id: new_id for new_id, old_id in enumerate(unique_game_ids, start=0)}
+
+            # Apply mapping
+            df["normalized_game_id"] = df["game_id"].map(id_mapping)
+
+            plt.figure(figsize=(15, 10))
 
             for player, group in df.groupby("player_name"):
-                # Sort by exact datetime
-                group = group.sort_values("game_id")
+                group = group.sort_values("normalized_game_id")
 
                 # Cumulative sum of points
                 group["cumulative_points"] = group["point_delta"].cumsum()
 
-                # Plot keeping datetime resolution (date + time)
-                plt.plot(group["game_id"], group["cumulative_points"], marker="o", label=player)
+                plt.plot(group["normalized_game_id"], group["cumulative_points"], marker="o", label=player)
 
             plt.title("Player Points Over Time")
-            plt.xlabel("Game ID")
+            plt.xlabel("Game")
             plt.ylabel("Cumulative Points")
             plt.legend()
             plt.grid(True)
-
-            # Show both date and time on the x-axis
-            # plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-            # plt.gcf().autofmt_xdate()
 
             # Save to in-memory SVG
             svg_io = io.StringIO()
