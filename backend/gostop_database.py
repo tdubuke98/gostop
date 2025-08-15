@@ -2,12 +2,13 @@
 
 import json
 import sqlite3
+import os
 
 # =============================================================================
 # Globals.
 # =============================================================================
 
-DEFAULT_DB = ".data.DEFAULT.db"
+DEFAULT_DB = os.getenv("DATABASE_PATH", ".data.DEFAULT.db")
 sql_statements = [ 
     """CREATE TABLE IF NOT EXISTS players (
             id INTEGER PRIMARY KEY AUTOINCREMENT, 

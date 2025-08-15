@@ -10,15 +10,6 @@ export const GameProvider = ({ children }) => {
   const [numGames, setNumGames] = useState(0);
   const { fetchAllPlayers } = usePlayers();
 
-  async function fetchAllGames() {
-    try {
-      const data = await sendREST("/games");
-      setGames(data);
-    } catch (error) {
-      console.error("Fetching games failed:", error);
-    }
-  };
-
   async function fetchNumGames() {
     try {
       const data = await sendREST("/num_games");
@@ -27,6 +18,29 @@ export const GameProvider = ({ children }) => {
       console.error("Fetching number of games failed:", error);
     }
   }
+
+  const sendNewGame = async (payload) => {
+    try {
+      const game = await sendREST(`/games/batch`, payload, "POST")
+      setGames([...game, ...games])
+    } catch (err) {
+      console.error("Create game failed:", err);
+      throw err;
+    }
+
+    // Gotta update the players and their balances when we delete a game
+    fetchAllPlayers();
+    fetchNumGames();
+  }
+
+  async function fetchAllGames() {
+    try {
+      const data = await sendREST("/games");
+      setGames(data);
+    } catch (error) {
+      console.error("Fetching games failed:", error);
+    }
+  };
 
   const deleteGame = async (id) => {
     try {
@@ -39,6 +53,7 @@ export const GameProvider = ({ children }) => {
 
     // Gotta update the players and their balances when we delete a game
     fetchAllPlayers();
+    fetchNumGames();
   };
 
   const createGame = async (winner_id) => {
@@ -69,26 +84,13 @@ export const GameProvider = ({ children }) => {
     }
   };
 
-  const fetchNewGame = async (gameId) => {
-    try {
-      const game = await sendREST(`/games/${gameId}`, undefined, "GET")
-      setGames([...game, ...games])
-    } catch (err) {
-      console.error("Create game failed:", err);
-      throw err;
-    }
-
-    // Gotta update the players and their balances when we delete a game
-    fetchAllPlayers();
-  }
-
   useEffect(() => {
     fetchAllGames();
     fetchNumGames();
   }, []);
 
   return (
-    <GameContext.Provider value={{ games, updateGameBalance, fetchNewGame, reloadBalances, createGame, deleteGame, numGames }}>
+    <GameContext.Provider value={{ games, updateGameBalance, sendNewGame, reloadBalances, createGame, deleteGame, numGames }}>
       {children}
     </GameContext.Provider>
   );

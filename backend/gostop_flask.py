@@ -300,34 +300,6 @@ class GostopFlask():
 
             return Response(svg_io.getvalue(), mimetype="image/svg+xml")
 
-        @self.app.route("/points_events/<int:role_id>", methods=["POST"])
-        @token_required
-        def add_points_event(role_id):
-            """
-            Add a points event to the database
-            """
-            data = request.get_json()
-            event_type = data.get("event_type")
-            points = data.get("points")
-
-            points_event_id = self.gostop_db._insert_new_points_event(role_id, event_type, points)
-
-            return jsonify(points_event_id), 201
-
-        @self.app.route("/roles/<int:game_id>", methods=["POST"])
-        @token_required
-        def add_role(game_id):
-            """
-            Add a role to the database
-            """
-            data = request.get_json()
-            player_id = data.get("player_id")
-            role = data.get("role")
-
-            role_id = self.gostop_db._insert_new_role(game_id, player_id, role)
-
-            return jsonify(role_id), 201
-
         @self.app.route("/num_games", methods=["GET"])
         def get_num_game():
             """
@@ -372,27 +344,6 @@ class GostopFlask():
 
             return jsonify(""), 200
 
-        @self.app.route("/update/<int:game_id>", methods=["PATCH"])
-        @token_required
-        def update_balance(game_id):
-            """
-            Calculate the point deltas for a specific game and update the player balances
-            """
-            self._update_balances(game_id)
-
-            return "", 200
-
-        @self.app.route("/games/<int:game_id>", methods=["GET"])
-        def get_game(game_id):
-            """
-            Get a nice display struct with a specific game in it
-            """
-            game_display_data = self.gostop_db._get_games_layout(game_id)
-            if game_display_data is None:
-                return jsonify([])
-
-            return jsonify(game_display_data), 201
-
         @self.app.route("/games", methods=["GET"])
         def get_games():
             """
@@ -404,18 +355,36 @@ class GostopFlask():
 
             return jsonify(games), 201
 
-        @self.app.route("/games", methods=["POST"])
+        @self.app.route("/games/batch", methods=["POST"])
         @token_required
         def add_game():
             """
             Add a game to the database
             """
             data = request.get_json()
+            
             winner_id = data.get("winner_id")
-
             game_id = self.gostop_db._insert_new_game(winner_id)
 
-            return jsonify(game_id), 201
+            players = data.get("players")
+            for player in players:
+                id = player.get("id")
+                role = player.get("role")
+
+                role_id = self.gostop_db._insert_new_role(game_id, id, role)
+                for event in player.get("points_events"):
+                    event_type = event.get("event_type")
+                    points = event.get("points")
+                    self.gostop_db._insert_new_points_event(role_id, event_type, points)
+
+            # Update all the game balances
+            self._update_balances(game_id)
+
+            game_display_data = self.gostop_db._get_games_layout(game_id)
+            if game_display_data is None:
+                return jsonify([])
+
+            return jsonify(game_display_data), 201
 
         @self.app.route("/players/<int:player_id>", methods=["DELETE"])
         @token_required

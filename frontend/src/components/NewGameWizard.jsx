@@ -18,7 +18,7 @@ export const WizardPage = {
 
 export default function NewGameWizard({ setShowNewGame }) {
   const { players } = usePlayers();
-  const { createGame, updateGameBalance, fetchNewGame } = useGames();
+  const { createGame, updateGameBalance, sendNewGame } = useGames();
 
   const [currentPage, setCurrentPage] = useState(WizardPage.SELECT_PLAYERS);
   const [nextDisabled, setNextDisabled] = useState(false);
@@ -29,11 +29,12 @@ export default function NewGameWizard({ setShowNewGame }) {
   const [winner, setWinner] = useState({ id: null, points: 0 });
 
   const handleSave = async () => {
-    let updatedPlaying = [...playing];
+    const payload = {
+        winner_id: winner.id,
+        players: []
+    };
 
-    let gameId = await createGame(winner.id);
-
-    for (const player of updatedPlaying) {
+    for (const player of playing) {
       let role = "PLAYER";
 
       if (player.id === dealer) {
@@ -42,36 +43,28 @@ export default function NewGameWizard({ setShowNewGame }) {
         role = "SELLER";
       }
 
-      const roleId = await sendREST(`/roles/${gameId}`, { role: role, player_id: player.id }, "POST" );
+      const pointsEvents = [];
 
-      updatedPlaying = updatedPlaying.map(p =>
-        player.id === p.id
-          ? { ...p, roleId: roleId }
-          : p
-      );
-    }
-
-    // If we have a first round lock, we should send updates for all other players
-    for (const player of updatedPlaying) {
       if (player.frl) {
-        await sendREST(`/points_events/${player.roleId}`, { event_type: "FIRST_ROUND_LOCK", points: 5 }, "POST" );
+        pointsEvents.push({ event_type: "FIRST_ROUND_LOCK", points: 5 });
       }
 
       if (player.id === winner.id) {
-        await sendREST(`/points_events/${player.roleId}`, { event_type: "WIN", points: winner.points }, "POST" );
-        continue;
+        pointsEvents.push({ event_type: "WIN", points: winner.points });
+      } else if (player.id === seller.id && seller.points > 0) {
+        pointsEvents.push({ event_type: "SELL", points: seller.points });
+      } else {
+        pointsEvents.push({ event_type: "LOSS_MULTIPLIER", points: player.multiplier });
       }
 
-      if (player.id === seller.id && seller.points > 0) {
-        await sendREST(`/points_events/${player.roleId}`, { event_type: "SELL", points: seller.points }, "POST" );
-        continue;
-      }
-
-      await sendREST(`/points_events/${player.roleId}`, { event_type: "LOSS_MULTIPLIER", points: player.multiplier }, "POST" );
+      payload.players.push({
+        id: player.id,
+        role: role,
+        points_events: pointsEvents
+      });
     }
 
-    await updateGameBalance(gameId);
-    await fetchNewGame(gameId);
+    await sendNewGame(payload);
 
     // Reset the game state
     setPlaying([]);
