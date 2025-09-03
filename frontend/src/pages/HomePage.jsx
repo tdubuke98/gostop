@@ -4,6 +4,8 @@ import Leaderboard from "../components/Leaderboard";
 import NewPlayer from "../components/NewPlayer";
 import EditPlayer from "../components/EditPlayer";
 import Games from "../components/Games";
+import LoginTheme from "../assets/gostop_home_page.wav";
+import BGM from "../components/BGM"
 
 export default function HomePage({ isAuth }) {
   // Player stuff
@@ -15,7 +17,7 @@ export default function HomePage({ isAuth }) {
 
   return (
     <div className="bg-gray-300">
-
+      <BGM url={LoginTheme} playing={true}/>
       {showNewPlayer && (<NewPlayer setShowNewPlayer={setShowNewPlayer} />)}
       {editPlayerId !== null && (<EditPlayer editPlayerId={editPlayerId} setEditPlayerId={setEditPlayerId} />)}
       {showNewGame && (<NewGameWizard setShowNewGame={setShowNewGame} />)}
