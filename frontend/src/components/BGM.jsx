@@ -1,42 +1,23 @@
-import React, { useState, useEffect } from "react";
-import Sound from "react-sound";
+import React, { useEffect, useState } from "react";
+import ReactHowler from "react-howler";
+import { useSettings } from "../context/SettingsContext";
 
-export default function BGM( {url, playing} ) {
-  // this tech might be browser specific since there are different auto play rules for different browsers chat says
-  const [volume, setVolume] = useState(0); // Start muted
-  const [playStatus, setPlayStatus] = useState(Sound.status.PAUSED)
+export default function BGM({ url }) {
+  const { muted } = useSettings();
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
-    const unmute = () => {
-      setVolume(100); // Full volume
-      setPlayStatus(Sound.status.PLAYING)
-    };
-
-    // Wait for first user interaction
-    document.addEventListener("click", unmute, {once: true});
-
-    return () => {
-        document.removeEventListener("click", unmute);
-      };
+    const start = () => setPlaying(true);
+    document.addEventListener("click", start, { once: true });
+    return () => document.removeEventListener("click", start);
   }, []);
-  
-  useEffect(() => {
-    if (playing) {
-      setVolume(100); // Unmute if playing
-    } else {
-      setVolume(0); // Mute if not playing
-    }
-  }, [playing]);
 
   return (
-      <Sound
-        url={url}
-        playStatus={playStatus}
-        playFromPosition={0}
-        autoLoad
-        loop
-        volume={volume} // Control volume here
-      />
+    <ReactHowler
+      src={url}
+      playing={playing}
+      loop={true}
+      volume={muted ? 0 : 1} // volume: 0.0–1.0
+    />
   );
 }
-

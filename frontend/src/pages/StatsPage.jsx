@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { sendREST } from "../utils/api.js";
+import StatsTheme from "../assets/gostop_stats_page.wav";
+import BGM from "../components/BGM"
 
 export default function StatsPage() {
   const [stats, setStats] = useState({
@@ -26,6 +28,7 @@ export default function StatsPage() {
 
   return (
     <div className="bg-gray-300 min-h-screen">
+      <BGM url={StatsTheme}/>
       <div className="flex flex-col p-4 sm:p-6 gap-4 sm:gap-6">
 
         {/* Dealer Win Percentage */}
