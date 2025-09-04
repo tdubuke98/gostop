@@ -6,6 +6,7 @@ import StatsPage from "./pages/StatsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import React, { useState, useEffect } from "react";
+import { SettingsProvider } from "./context/SettingsContext";
 
 export default function App() {
   const [isAuth, setIsAuth] = useState(false);
@@ -19,16 +20,18 @@ export default function App() {
   
   return (
     <Router>
-      <PlayerProvider>
-        <GameProvider>
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<HomePage isAuth={isAuth} />} />
-            <Route path="/stats" element={<StatsPage />} />
-            <Route path="/login" element={<LoginPage setIsAuth={setIsAuth} isAuth={isAuth} />} />
-          </Routes>
-        </GameProvider>
-      </PlayerProvider>
+      <SettingsProvider>
+        <PlayerProvider>
+          <GameProvider>
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<HomePage isAuth={isAuth} />} />
+              <Route path="/stats" element={<StatsPage />} />
+              <Route path="/login" element={<LoginPage setIsAuth={setIsAuth} isAuth={isAuth} />} />
+            </Routes>
+          </GameProvider>
+        </PlayerProvider>
+      </SettingsProvider>
     </Router>
   );
 }

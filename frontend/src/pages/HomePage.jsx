@@ -17,7 +17,7 @@ export default function HomePage({ isAuth }) {
 
   return (
     <div className="bg-gray-300">
-      <BGM url={LoginTheme} playing={true}/>
+      <BGM url={LoginTheme} />
       {showNewPlayer && (<NewPlayer setShowNewPlayer={setShowNewPlayer} />)}
       {editPlayerId !== null && (<EditPlayer editPlayerId={editPlayerId} setEditPlayerId={setEditPlayerId} />)}
       {showNewGame && (<NewGameWizard setShowNewGame={setShowNewGame} />)}
