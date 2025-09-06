@@ -7,9 +7,7 @@ export default function BGM({ url }) {
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
-    const start = () => setPlaying(true);
-    document.addEventListener("click", start, { once: true });
-    return () => document.removeEventListener("click", start);
+    setPlaying(true);
   }, []);
 
   return (
