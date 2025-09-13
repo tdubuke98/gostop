@@ -472,3 +472,19 @@ class GostopDB():
             return None
 
         return players
+
+    def _set_player_name(self, id, name):
+        """
+        Set a player's username
+        """
+        cur = self.db_con.cursor()
+
+        set_cmd = '''
+                    UPDATE players
+                    SET name = ?
+                    WHERE id = ?
+                  '''
+        res = cur.execute(set_cmd, (name, id, ))
+        
+        p_obj = res.fetchall()
+        return dict(p_obj)
