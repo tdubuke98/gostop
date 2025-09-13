@@ -49,6 +49,8 @@ export default function StatsPage() {
                   <th className="px-4 py-2">Games Played</th>
                   <th className="px-4 py-2">Win Percentage</th>
                   <th className="px-4 py-2">Average Points per Win</th>
+                  <th className="px-4 py-2">Average Sell</th>
+                  <th className="px-4 py-2">Max Sell</th>
                 </tr>
               </thead>
               <tbody>
@@ -58,6 +60,8 @@ export default function StatsPage() {
                     <td className="px-4 py-2">{player.games_played}</td>
                     <td className="px-4 py-2">{player.win_percentage}%</td>
                     <td className="px-4 py-2">{player.avg_points_per_win}</td>
+                    <td className="px-4 py-2">{player.avg_sell}</td>
+                    <td className="px-4 py-2">{player.max_sell}</td>
                   </tr>
                 ))}
               </tbody>
