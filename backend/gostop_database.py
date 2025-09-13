@@ -328,7 +328,10 @@ class GostopDB():
 
         return game_dict
 
-    def _get_player_games_played(self):
+    def _get_player_stats(self):
+        """
+        Get a bunch of stats (games_played, won, win_percentage, avg_points_per_win, avg_sell, max_sell) for every player
+        """
         cur = self.db_con.cursor()
 
         cmd = '''
@@ -345,7 +348,24 @@ class GostopDB():
                         1.0 * SUM(CASE WHEN g.winner_id = p.id THEN r.point_delta ELSE 0 END) /
                         NULLIF(COUNT(DISTINCT g.id), 0),
                         2
-                    ) AS avg_points_per_win
+                    ) AS avg_points_per_win,
+                    NULLIF(
+                        ROUND(
+                            1.0 *
+                            SUM(
+                                CASE WHEN r.role = 'SELLER' THEN r.point_delta ELSE 0 END
+                            ) /
+                            COUNT(DISTINCT r.id),
+                            2
+                        ),
+                        0
+                    ) AS avg_sell,
+                    NULLIF(
+                        MAX(
+                        CASE WHEN r.role = 'SELLER' THEN point_delta ELSE 0 END
+                        ),
+                        0
+                    ) AS max_sell
                 FROM players p
                 LEFT JOIN roles r ON p.id = r.player_id
                 LEFT JOIN games g ON g.id = r.game_id AND g.winner_id = p.id
