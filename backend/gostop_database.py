@@ -83,6 +83,7 @@ class GostopDB():
             SELECT 
                 r.player_id,
                 p.name AS player_name,
+                p.username AS player_username,
                 g.id AS game_id,
                 r.point_delta
             FROM roles r

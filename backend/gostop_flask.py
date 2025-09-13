@@ -279,7 +279,7 @@ class GostopFlask():
 
             plt.figure(figsize=(15, 10))
 
-            for player, group in df.groupby("player_name"):
+            for player, group in df.groupby("player_username"):
                 group = group.sort_values("normalized_game_id")
 
                 # Cumulative sum of points
