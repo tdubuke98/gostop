@@ -303,7 +303,7 @@ class GostopFlask():
             day_starts = df.groupby(df["game_timestamp"].dt.date)["normalized_game_id"].min() # all of the start of days
             date_axis.set_xticks(day_starts.values) # set tick at each day start
             date_axis.set_xticklabels([d.strftime("%Y-%m-%d") for d in day_starts.index], rotation=45) # format the date nicely and print on the tick
-            date_axis.set_xlabel("Date")
+            date_axis.set_xlabel("Date (GMT)")
 
             # Save to in-memory SVG
             svg_io = io.StringIO()
