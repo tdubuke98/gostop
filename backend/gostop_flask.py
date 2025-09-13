@@ -277,7 +277,11 @@ class GostopFlask():
             # Apply mapping
             df["normalized_game_id"] = df["game_id"].map(id_mapping)
 
+            # normalize game timestamps
+            df["game_timestamp"] = pd.to_datetime(df["game_timestamp"])
+
             plt.figure(figsize=(15, 10))
+            gameid_axis = plt.gca()
 
             for player, group in df.groupby("player_name"):
                 group = group.sort_values("normalized_game_id")
@@ -285,13 +289,21 @@ class GostopFlask():
                 # Cumulative sum of points
                 group["cumulative_points"] = group["point_delta"].cumsum()
 
-                plt.plot(group["normalized_game_id"], group["cumulative_points"], marker="o", label=player)
+                gameid_axis.plot(group["normalized_game_id"], group["cumulative_points"], marker="o", label=player)
 
             plt.title("Player Points Over Time")
-            plt.xlabel("Game")
+            gameid_axis.set_xlabel("Game")
             plt.ylabel("Cumulative Points")
             plt.legend()
             plt.grid(True)
+
+
+            date_axis = gameid_axis.twiny() # "twin" the y axis creating a secondary x axis
+            date_axis.set_xlim(gameid_axis.get_xlim()) # set the range of secondary x axis
+            day_starts = df.groupby(df["game_timestamp"].dt.date)["normalized_game_id"].min() # all of the start of days
+            date_axis.set_xticks(day_starts.values) # set tick at each day start
+            date_axis.set_xticklabels([d.strftime("%Y-%m-%d") for d in day_starts.index], rotation=45) # format the date nicely and print on the tick
+            date_axis.set_xlabel("Date")
 
             # Save to in-memory SVG
             svg_io = io.StringIO()
