@@ -6,3 +6,4 @@ gunicorn
 pandas
 matplotlib
 scipy
+ddtrace
