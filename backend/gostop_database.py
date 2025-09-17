@@ -84,6 +84,7 @@ class GostopDB():
                 r.player_id,
                 p.name AS player_name,
                 g.id AS game_id,
+                g.created_at AS game_timestamp,
                 r.point_delta
             FROM roles r
             JOIN games g ON r.game_id = g.id
