@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import NewGameWizard from "../components/NewGameWizard";
 import Leaderboard from "../components/Leaderboard";
 import NewPlayer from "../components/NewPlayer";
@@ -18,11 +18,13 @@ export default function HomePage({ isAuth }) {
   return (
     <div className="bg-gray-300">
       <BGM url={LoginTheme} />
-      {showNewPlayer && (<NewPlayer setShowNewPlayer={setShowNewPlayer} />)}
-      {editPlayerId !== null && (<EditPlayer editPlayerId={editPlayerId} setEditPlayerId={setEditPlayerId} />)}
-      {showNewGame && (<NewGameWizard setShowNewGame={setShowNewGame} />)}
+      {showNewPlayer && <NewPlayer setShowNewPlayer={setShowNewPlayer} />}
+      {editPlayerId !== null && (
+        <EditPlayer editPlayerId={editPlayerId} setEditPlayerId={setEditPlayerId} />
+      )}
+      {showNewGame && <NewGameWizard setShowNewGame={setShowNewGame} />}
 
-      <div className="flex flex-row h-[calc(100vh-68px)] gap-6 p-6">
+      <div className="flex flex-col md:flex-row h-auto md:h-[calc(100vh-68px)] gap-6 p-4 md:p-6">
         <Leaderboard setShowNewPlayer={setShowNewPlayer} setEditPlayerId={setEditPlayerId} isAuth={isAuth} />
         <Games setShowNewGame={setShowNewGame} isAuth={isAuth} />
       </div>
