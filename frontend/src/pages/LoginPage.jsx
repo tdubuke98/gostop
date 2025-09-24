@@ -13,11 +13,9 @@ export default function LoginPage({ setIsAuth, isAuth }) {
 
     try {
       const result = await sendREST("/login", { username, password }, "POST");
-      console.log("Login success:", result);
       localStorage.setItem("token", result.access_token);
       setIsAuth(true);
     } catch (err) {
-      console.error("Login failed:", err.message);
       setError("Invalid username or password");
     }
   };
@@ -28,16 +26,15 @@ export default function LoginPage({ setIsAuth, isAuth }) {
   };
 
   if (isAuth) {
-    // Show logout screen
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-300">
-        <div className="bg-gray-800 shadow-lg rounded-lg p-8 w-full max-w-md text-center">
-          <h2 className="text-2xl font-bold mb-6 text-white">
+      <div className="flex items-center justify-center min-h-screen bg-gray-300 p-4">
+        <div className="bg-gray-800 shadow-lg rounded-lg p-6 sm:p-8 w-full max-w-md text-center">
+          <h2 className="text-xl sm:text-2xl font-bold mb-6 text-white">
             You are logged in
           </h2>
           <button
             onClick={handleLogout}
-            className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded flex justify-center items-center gap-2 transition-colors"
+            className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded flex justify-center items-center gap-2 transition-colors"
           >
             <LogOut className="w-5 h-5" />
             Logout
@@ -48,19 +45,21 @@ export default function LoginPage({ setIsAuth, isAuth }) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-300">
-      <div className="bg-gray-800 shadow-lg rounded-lg p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-white text-center">
+    <div className="flex items-center justify-center min-h-screen bg-gray-300 p-4">
+      <div className="bg-gray-800 shadow-lg rounded-lg p-6 sm:p-8 w-full max-w-md">
+        <h2 className="text-xl sm:text-2xl font-bold mb-6 text-white text-center">
           Login
         </h2>
 
         {error && (
-          <div className="mb-4 text-red-400 text-center">{error}</div>
+          <div className="mb-4 text-red-400 text-center text-sm sm:text-base">
+            {error}
+          </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="username" className="block text-gray-300">
+            <label htmlFor="username" className="block text-gray-300 text-sm sm:text-base">
               Username
             </label>
             <input
@@ -68,13 +67,13 @@ export default function LoginPage({ setIsAuth, isAuth }) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="mt-1 w-full px-3 py-2 sm:py-3 border rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-gray-300">
+            <label htmlFor="password" className="block text-gray-300 text-sm sm:text-base">
               Password
             </label>
             <input
@@ -82,14 +81,14 @@ export default function LoginPage({ setIsAuth, isAuth }) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="mt-1 w-full px-3 py-2 sm:py-3 border rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
               required
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded flex justify-center items-center gap-2 transition-colors"
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded flex justify-center items-center gap-2 transition-colors text-sm sm:text-base"
           >
             <LogIn className="w-5 h-5" />
             Login

@@ -30,18 +30,15 @@ export default function NewGameWizard({ setShowNewGame }) {
 
   const handleSave = async () => {
     const payload = {
-        winner_id: winner.id,
-        players: []
+      winner_id: winner.id,
+      players: [],
     };
 
     for (const player of playing) {
       let role = "PLAYER";
 
-      if (player.id === dealer) {
-        role = "DEALER";
-      } else if (player.id === seller.id) {
-        role = "SELLER";
-      }
+      if (player.id === dealer) role = "DEALER";
+      else if (player.id === seller.id) role = "SELLER";
 
       const pointsEvents = [];
 
@@ -54,25 +51,27 @@ export default function NewGameWizard({ setShowNewGame }) {
       } else if (player.id === seller.id && seller.points > 0) {
         pointsEvents.push({ event_type: "SELL", points: seller.points });
       } else {
-        pointsEvents.push({ event_type: "LOSS_MULTIPLIER", points: player.multiplier });
+        pointsEvents.push({
+          event_type: "LOSS_MULTIPLIER",
+          points: player.multiplier,
+        });
       }
 
       payload.players.push({
         id: player.id,
-        role: role,
-        points_events: pointsEvents
+        role,
+        points_events: pointsEvents,
       });
     }
 
     await sendNewGame(payload);
 
-    // Reset the game state
     setPlaying([]);
     setDealer(null);
     setSeller(null);
     setWinner(null);
     setShowNewGame(false);
-  }
+  };
 
   const handleNext = () => {
     switch (currentPage) {
@@ -80,18 +79,13 @@ export default function NewGameWizard({ setShowNewGame }) {
         setCurrentPage(WizardPage.CHOOSE_DEALER);
         break;
       case WizardPage.CHOOSE_DEALER:
-        if (playing.length === 4)
-          setCurrentPage(WizardPage.CHOOSE_SELLER);
-        else
-          setCurrentPage(WizardPage.SCORE_RESULTS);
+        setCurrentPage(playing.length === 4 ? WizardPage.CHOOSE_SELLER : WizardPage.SCORE_RESULTS);
         break;
       case WizardPage.CHOOSE_SELLER:
         setCurrentPage(WizardPage.SCORE_RESULTS);
         break;
       case WizardPage.SCORE_RESULTS:
         setCurrentPage(WizardPage.CONFIRM);
-        break;
-      default:
         break;
     }
   };
@@ -105,15 +99,10 @@ export default function NewGameWizard({ setShowNewGame }) {
         setCurrentPage(WizardPage.CHOOSE_DEALER);
         break;
       case WizardPage.SCORE_RESULTS:
-        if (playing.length === 4)
-          setCurrentPage(WizardPage.CHOOSE_SELLER);
-        else
-          setCurrentPage(WizardPage.CHOOSE_DEALER);
+        setCurrentPage(playing.length === 4 ? WizardPage.CHOOSE_SELLER : WizardPage.CHOOSE_DEALER);
         break;
       case WizardPage.CONFIRM:
         setCurrentPage(WizardPage.SCORE_RESULTS);
-        break;
-      default:
         break;
     }
   };
@@ -128,26 +117,60 @@ export default function NewGameWizard({ setShowNewGame }) {
 
   return (
     <div className="flex fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
-      <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg p-6 gap-4 w-1/2 h-1/2 justify-between">
-        {currentPage === WizardPage.SELECT_PLAYERS && <NewGamePlayers playing={playing} setPlaying={setPlaying} setNextDisabled={setNextDisabled} />}
-        {currentPage === WizardPage.CHOOSE_DEALER && <NewGameDealer playing={playing} setDealer={setDealer} dealer={dealer} setNextDisabled={setNextDisabled} />}
-        {currentPage === WizardPage.CHOOSE_SELLER && <NewGameSeller playing={playing} dealer={dealer} seller={seller} setSeller={setSeller} />}
-        {currentPage === WizardPage.SCORE_RESULTS && <NewGameScore
-                  playing={playing}
-                  setPlaying={setPlaying}
-                  dealer={dealer}
-                  seller={seller}
-                  winner={winner}
-                  setWinner={setWinner}
-                  setNextDisabled={setNextDisabled}
-                />}
-        {currentPage === WizardPage.CONFIRM && <NewGameConfirm playing={playing} dealer={dealer} seller={seller} winner={winner} />}
+      <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg 
+                      w-full h-full sm:w-3/4 sm:h-3/4 lg:w-1/2 lg:h-1/2 
+                      p-4 sm:p-6 gap-4 overflow-y-auto">
+        
+        {/* Wizard Pages */}
+        {currentPage === WizardPage.SELECT_PLAYERS && (
+          <NewGamePlayers
+            playing={playing}
+            setPlaying={setPlaying}
+            setNextDisabled={setNextDisabled}
+          />
+        )}
+        {currentPage === WizardPage.CHOOSE_DEALER && (
+          <NewGameDealer
+            playing={playing}
+            setDealer={setDealer}
+            dealer={dealer}
+            setNextDisabled={setNextDisabled}
+          />
+        )}
+        {currentPage === WizardPage.CHOOSE_SELLER && (
+          <NewGameSeller
+            playing={playing}
+            dealer={dealer}
+            seller={seller}
+            setSeller={setSeller}
+          />
+        )}
+        {currentPage === WizardPage.SCORE_RESULTS && (
+          <NewGameScore
+            playing={playing}
+            setPlaying={setPlaying}
+            dealer={dealer}
+            seller={seller}
+            winner={winner}
+            setWinner={setWinner}
+            setNextDisabled={setNextDisabled}
+          />
+        )}
+        {currentPage === WizardPage.CONFIRM && (
+          <NewGameConfirm
+            playing={playing}
+            dealer={dealer}
+            seller={seller}
+            winner={winner}
+          />
+        )}
 
-        <div className="flex flex-row justify-end gap-1 space-x-2">
+        {/* Controls */}
+        <div className="flex flex-wrap justify-end gap-2">
           <button
             onClick={handleBack}
             disabled={currentPage === WizardPage.SELECT_PLAYERS}
-            className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-white transition"
+            className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-white transition disabled:opacity-50"
           >
             Previous
           </button>
@@ -159,20 +182,18 @@ export default function NewGameWizard({ setShowNewGame }) {
             Cancel
           </button>
 
-          {currentPage !== WizardPage.CONFIRM && (
+          {currentPage !== WizardPage.CONFIRM ? (
             <button
               onClick={handleNext}
               disabled={nextDisabled}
-              className={`${ nextDisabled
-                           ? "bg-gray-400 cursor-not-allowed"
-                           : "bg-blue-600 hover:bg-blue-700"
-                         } px-4 py-2 rounded text-white transition`}
+              className={`${nextDisabled
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+                } px-4 py-2 rounded text-white transition`}
             >
               Next
             </button>
-          )}
-
-          {currentPage === WizardPage.CONFIRM && (
+          ) : (
             <button
               onClick={handleSave}
               className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white transition"
