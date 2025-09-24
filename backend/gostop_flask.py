@@ -279,13 +279,12 @@ class GostopFlask():
 
             plt.figure(figsize=(15, 10))
 
-            for player, group in df.groupby("player_name"):
+            for player, group in df.groupby(["player_name", "player_username"]):
                 group = group.sort_values("normalized_game_id")
-
                 # Cumulative sum of points
                 group["cumulative_points"] = group["point_delta"].cumsum()
 
-                plt.plot(group["normalized_game_id"], group["cumulative_points"], marker="o", label=player)
+                plt.plot(group["normalized_game_id"], group["cumulative_points"], marker="o", label=player[0])
 
             plt.title("Player Points Over Time")
             plt.xlabel("Game")
