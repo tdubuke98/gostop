@@ -9,54 +9,23 @@ import os
 # =============================================================================
 
 DEFAULT_DB = os.getenv("DATABASE_PATH", ".data.DEFAULT.db")
-sql_statements = [ 
-    """CREATE TABLE IF NOT EXISTS players (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            balance INTEGER NOT NULL,
-            name text NOT NULL,
-            username text NOT NULL,
-            password text,
-            is_admin INTEGER NOT NULL DEFAULT 0
-        );""",
-
-    """CREATE TABLE IF NOT EXISTS games (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            winner_id INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (winner_id) REFERENCES players(id) ON DELETE CASCADE
-        );""",
-
-    """CREATE TABLE IF NOT EXISTS roles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            game_id INTEGER NOT NULL,
-            player_id INTEGER NOT NULL,
-            role text NOT NULL,
-            point_delta INTEGER NOT NULL,
-            FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-            FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
-        );""",
-
-    """CREATE TABLE IF NOT EXISTS points_events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            role_id INTEGER NOT NULL,
-            event_type text NOT NULL,
-            points INTEGER NOT NULL,
-            FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
-        );""",
-]
 
 class GostopDB():
 
     def __init__(self):
-        self.db_con = sqlite3.connect(DEFAULT_DB, check_same_thread=False)
+        self.db_con = sqlite3.connect(DEFAULT_DB)
         self.db_con.row_factory = sqlite3.Row
 
+    def close(self):
+        self.db_con.close()
+
+    def create_database(self):
         cur = self.db_con.cursor()
-        cur.execute("PRAGMA foreign_keys = ON;")
 
-        for statement in sql_statements:
-            cur.execute(statement)
+        with open("schema.sql", "r") as f:
+            sql_script = f.read()
 
+        cur.executescript(sql_script)
         self.db_con.commit()
 
     def _insert_new_points_event(self, role_id, event_type, points):
@@ -81,7 +50,7 @@ class GostopDB():
         cur = self.db_con.cursor()
         cmd = '''
             SELECT 
-                r.player_id,
+                r.player_id AS player_id,
                 p.name AS player_name,
                 g.id AS game_id,
                 r.point_delta
@@ -485,4 +454,6 @@ class GostopDB():
                     SET name = :name, username = :username
                     WHERE id = :id
                 '''
-        res = cur.execute(set_cmd, {"name": name, "username": username, "id": id})
+        cur.execute(set_cmd, {"name": name, "username": username, "id": id})
+
+        self.db_con.commit()
