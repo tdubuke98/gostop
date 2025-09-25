@@ -335,41 +335,24 @@ class GostopDB():
         cur = self.db_con.cursor()
 
         cmd = '''
-                SELECT 
-                    p.id,
-                    p.name,
-                    COUNT(DISTINCT r.game_id) AS games_played,
-                    COUNT(DISTINCT g.id) AS games_won,
-                    ROUND(
-                        100.0 * COUNT(DISTINCT g.id) / NULLIF(COUNT(DISTINCT r.game_id), 0),
-                        2
-                    ) AS win_percentage,
-                    ROUND(
-                        1.0 * SUM(CASE WHEN g.winner_id = p.id THEN r.point_delta ELSE 0 END) /
-                        NULLIF(COUNT(DISTINCT g.id), 0),
-                        2
-                    ) AS avg_points_per_win,
-                    NULLIF(
-                        ROUND(
-                            1.0 *
-                            SUM(
-                                CASE WHEN r.role = 'SELLER' THEN pevs.points ELSE 0 END
-                            ) /
-                            COUNT(DISTINCT r.id),
-                            2
-                        ),
-                        0
-                    ) AS avg_sell,
-                    NULLIF(
-                        MAX( CASE WHEN r.role = 'SELLER' THEN pevs.points ELSE 0 END ), 0
-                    ) AS max_sell
-                FROM players p
-                LEFT JOIN roles r ON p.id = r.player_id
-                LEFT JOIN games g ON g.id = r.game_id AND g.winner_id = p.id
-                LEFT JOIN points_events pevs ON r.id = pevs.role_id
-                GROUP BY p.id, p.name
-                ORDER BY games_played DESC;
-                '''
+            SELECT 
+                p.id,
+                p.name,
+                COUNT(DISTINCT r.game_id) AS games_played,
+                ROUND( 100.0 * SUM ( CASE WHEN pevs.event_type = 'WIN' THEN 1 ELSE 0 END) / COUNT(DISTINCT r.game_id), 2 ) AS win_percentage,
+                ROUND( 1.0 * SUM( CASE WHEN g.winner_id = p.id THEN r.point_delta ELSE 0 END) / NULLIF(COUNT(DISTINCT g.id), 0), 2 ) AS avg_points_per_win,
+                NULLIF( MAX( CASE WHEN pevs.event_type = 'WIN' THEN r.point_delta ELSE 0 END), 0) AS max_win,
+                ROUND( 1.0 * SUM( CASE WHEN pevs.event_type = 'LOSS_MULTIPLIER' THEN r.point_delta ELSE 0 END) / SUM ( CASE WHEN pevs.event_type = 'LOSS_MULTIPLIER' THEN 1 ELSE 0 END), 2) AS avg_points_per_loss,
+                NULLIF( MIN( CASE WHEN pevs.event_type = 'LOSS_MULTIPLIER' THEN r.point_delta ELSE 0 END ), 0) AS max_loss,
+                ROUND( 1.0 * SUM( CASE WHEN pevs.event_type = 'SELL' THEN pevs.points ELSE 0 END ) / SUM ( CASE WHEN r.role = 'SELLER' THEN 1 ELSE 0 END ), 2 ) AS avg_sell,
+                NULLIF( MAX( CASE WHEN pevs.event_type = 'SELL' THEN pevs.points ELSE 0 END ), 0) AS max_sell
+            FROM players p
+            LEFT JOIN roles r ON p.id = r.player_id
+            LEFT JOIN games g ON g.id = r.game_id AND g.winner_id = p.id
+            LEFT JOIN points_events pevs ON r.id = pevs.role_id
+            GROUP BY p.id, p.name
+            ORDER BY games_played DESC;
+            '''
 
         res = cur.execute(cmd)
 
