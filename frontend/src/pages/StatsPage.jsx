@@ -49,6 +49,9 @@ export default function StatsPage() {
                 <th className="px-2 sm:px-4 py-1 sm:py-2">Games Played</th>
                 <th className="px-2 sm:px-4 py-1 sm:py-2">Win %</th>
                 <th className="px-2 sm:px-4 py-1 sm:py-2">Avg Points/Win</th>
+                <th className="px-2 sm:px-4 py-1 sm:py-2">Max Win</th>
+                <th className="px-2 sm:px-4 py-1 sm:py-2">Avg Points/Loss</th>
+                <th className="px-2 sm:px-4 py-1 sm:py-2">Max Loss</th>
                 <th className="px-2 sm:px-4 py-1 sm:py-2">Avg Sell</th>
                 <th className="px-2 sm:px-4 py-1 sm:py-2">Max Sell</th>
               </tr>
@@ -59,9 +62,12 @@ export default function StatsPage() {
                   <td className="px-2 sm:px-4 py-1 sm:py-2">{player.name}</td>
                   <td className="px-2 sm:px-4 py-1 sm:py-2">{player.games_played}</td>
                   <td className="px-2 sm:px-4 py-1 sm:py-2">{player.win_percentage}%</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.avg_points_per_win}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.avg_sell}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.max_sell}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.avg_points_per_win ?? "-"}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.max_win ?? "-"}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.avg_points_per_loss ?? "-"}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.max_loss ?? "-"}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.avg_sell ?? "-"}</td>
+                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.max_sell ?? "-"}</td>
                 </tr>
               ))}
             </tbody>
