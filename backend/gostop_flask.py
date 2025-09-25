@@ -406,7 +406,9 @@ class GostopFlask():
         @token_required
         def update_player(player_id):
             data = request.get_json()
-            return "", 200
+            new_name = data.get("name").strip()
+            updated_player = self.gostop_db._set_player_name(player_id, new_name)
+            return jsonify(updated_player), 200
 
         @self.app.route("/players", methods=["GET"])
         def get_players():
