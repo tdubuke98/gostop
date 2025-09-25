@@ -338,6 +338,7 @@ class GostopDB():
             SELECT 
                 p.id,
                 p.name,
+                p.username,
                 COUNT(DISTINCT r.game_id) AS games_played,
                 ROUND( 100.0 * SUM ( CASE WHEN pevs.event_type = 'WIN' THEN 1 ELSE 0 END) / COUNT(DISTINCT r.game_id), 2 ) AS win_percentage,
                 ROUND( 1.0 * SUM( CASE WHEN g.winner_id = p.id THEN r.point_delta ELSE 0 END) / NULLIF(COUNT(DISTINCT g.id), 0), 2 ) AS avg_points_per_win,
@@ -472,3 +473,16 @@ class GostopDB():
             return None
 
         return players
+
+    def _set_player_name(self, id, name, username):
+        """
+        Set a player's name
+        """
+        cur = self.db_con.cursor()
+
+        set_cmd = '''
+                    UPDATE players
+                    SET name = :name, username = :username
+                    WHERE id = :id
+                '''
+        res = cur.execute(set_cmd, {"name": name, "username": username, "id": id})

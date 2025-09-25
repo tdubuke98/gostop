@@ -392,21 +392,21 @@ class GostopFlask():
             """
             Delete a player from the databse if they have a 0 balance ONLY
             """
-            player = self.gostop_db._get_player(id=player_id)
-            if player is None:
-                return jsonify({"error": "Delete failed: Unknown player id"}), 400
-
-            if player[0]["balance"] != 0:
-                return jsonify({"error": "Delete failed: Un-paid balance"}), 409
-
-            self.gostop_db._delete_player(player_id)
-            return "", 200
+            return "", 405
 
         @self.app.route("/players/<int:player_id>", methods=["PATCH"])
         @token_required
         def update_player(player_id):
             data = request.get_json()
-            return "", 200
+            name = data.get("name")
+            username = data.get("username")
+            self.gostop_db._set_player_name(player_id, name, username)
+
+            player = self.gostop_db._get_player(id=player_id)
+            if player is None:
+                return "", 500
+
+            return player[0], 200
 
         @self.app.route("/players", methods=["GET"])
         def get_players():
