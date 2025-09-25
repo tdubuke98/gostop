@@ -39,33 +39,41 @@ export default function StatsPage() {
         {/* Players and Game Count */}
         <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md overflow-x-auto">
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Player Stats</h2>
-          <table className="table-auto w-full text-left text-white min-w-max">
-            <thead>
+          <table className="table-auto w-full min-w-max text-sm sm:text-base text-white border-collapse">
+            <thead className="text-xs uppercase bg-gray-700">
               <tr>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Name</th>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Games Played</th>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Win %</th>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Avg Points/Win</th>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Max Win</th>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Avg Points/Loss</th>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Max Loss</th>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Avg Sell</th>
-                <th className="px-2 sm:px-4 py-1 sm:py-2">Max Sell</th>
+                <th className="px-2 sm:px-4 py-2 text-left rounded-tl-lg">Name</th>
+                <th className="px-2 sm:px-4 py-2 text-left">Games Played</th>
+                <th className="px-2 sm:px-4 py-2 text-left">Win %</th>
+                <th className="px-2 sm:px-4 py-2 text-left">Avg Points/Win</th>
+                <th className="px-2 sm:px-4 py-2 text-left">Max Win</th>
+                <th className="px-2 sm:px-4 py-2 text-left">Avg Points/Loss</th>
+                <th className="px-2 sm:px-4 py-2 text-left">Max Loss</th>
+                <th className="px-2 sm:px-4 py-2 text-left">Avg Sell</th>
+                <th className="px-2 sm:px-4 py-2 text-left rounded-tr-lg">Max Sell</th>
               </tr>
             </thead>
             <tbody>
-              {stats.players.map(player => (
-                <tr key={player.id} className="border-t border-gray-600">
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.name}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.games_played}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.win_percentage}%</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.avg_points_per_win ?? "-"}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.max_win ?? "-"}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.avg_points_per_loss ?? "-"}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.max_loss ?? "-"}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.avg_sell ?? "-"}</td>
-                  <td className="px-2 sm:px-4 py-1 sm:py-2">{player.max_sell ?? "-"}</td>
-                </tr>
+              {stats.players.map((player) => (
+              <tr
+                key={player.id}
+                className="odd:bg-gray-900 even:bg-gray-800 border-b border-gray-700"
+              >
+                <td className="px-2 sm:px-4 py-2 text-left">
+                  <div className="flex flex-col text-left">
+                    <span className="text-white">{player.name}</span>
+                    <span className="text-gray-400 italic text-sm">{player.username}</span>
+                  </div>
+                </td>
+                <td className="px-2 sm:px-4 py-2 text-left">{player.games_played}</td>
+                <td className="px-2 sm:px-4 py-2 text-left">{player.win_percentage ?? "-"}</td>
+                <td className="px-2 sm:px-4 py-2 text-left">{player.avg_points_per_win ?? "-"}</td>
+                <td className="px-2 sm:px-4 py-2 text-left">{player.max_win ?? "-"}</td>
+                <td className="px-2 sm:px-4 py-2 text-left">{player.avg_points_per_loss ?? "-"}</td>
+                <td className="px-2 sm:px-4 py-2 text-left">{player.max_loss ?? "-"}</td>
+                <td className="px-2 sm:px-4 py-2 text-left">{player.avg_sell ?? "-"}</td>
+                <td className="px-2 sm:px-4 py-2 text-left">{player.max_sell ?? "-"}</td>
+              </tr>
               ))}
             </tbody>
           </table>

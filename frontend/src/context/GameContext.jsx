@@ -19,6 +19,15 @@ export const GameProvider = ({ children }) => {
     }
   }
 
+  async function fetchAllGames() {
+    try {
+      const data = await sendREST("/games");
+      setGames(data);
+    } catch (error) {
+      console.error("Fetching games failed:", error);
+    }
+  };
+
   const sendNewGame = async (payload) => {
     try {
       const game = await sendREST(`/games/batch`, payload, "POST")
@@ -32,15 +41,6 @@ export const GameProvider = ({ children }) => {
     fetchAllPlayers();
     fetchNumGames();
   }
-
-  async function fetchAllGames() {
-    try {
-      const data = await sendREST("/games");
-      setGames(data);
-    } catch (error) {
-      console.error("Fetching games failed:", error);
-    }
-  };
 
   const deleteGame = async (id) => {
     try {
