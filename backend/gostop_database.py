@@ -353,7 +353,7 @@ class GostopDB():
                         ROUND(
                             1.0 *
                             SUM(
-                                CASE WHEN r.role = 'SELLER' THEN r.point_delta ELSE 0 END
+                                CASE WHEN r.role = 'SELLER' THEN pevs.points ELSE 0 END
                             ) /
                             COUNT(DISTINCT r.id),
                             2
@@ -361,14 +361,12 @@ class GostopDB():
                         0
                     ) AS avg_sell,
                     NULLIF(
-                        MAX(
-                        CASE WHEN r.role = 'SELLER' THEN point_delta ELSE 0 END
-                        ),
-                        0
+                        MAX( CASE WHEN r.role = 'SELLER' THEN pevs.points ELSE 0 END ), 0
                     ) AS max_sell
                 FROM players p
                 LEFT JOIN roles r ON p.id = r.player_id
                 LEFT JOIN games g ON g.id = r.game_id AND g.winner_id = p.id
+                LEFT JOIN points_events pevs ON r.id = pevs.role_id
                 GROUP BY p.id, p.name
                 ORDER BY games_played DESC;
                 '''
@@ -381,7 +379,6 @@ class GostopDB():
             return None
 
         return stats_dict
-
 
     def _get_win_deal_data(self):
         """
