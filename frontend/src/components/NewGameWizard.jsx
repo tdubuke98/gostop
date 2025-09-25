@@ -48,13 +48,10 @@ export default function NewGameWizard({ setShowNewGame }) {
 
       if (player.id === winner.id) {
         pointsEvents.push({ event_type: "WIN", points: winner.points });
-      } else if (player.id === seller.id && seller.points > 0) {
+      } else if (player.id === seller.id) {
         pointsEvents.push({ event_type: "SELL", points: seller.points });
       } else {
-        pointsEvents.push({
-          event_type: "LOSS_MULTIPLIER",
-          points: player.multiplier,
-        });
+        pointsEvents.push({ event_type: "LOSS_MULTIPLIER", points: player.multiplier });
       }
 
       payload.players.push({
