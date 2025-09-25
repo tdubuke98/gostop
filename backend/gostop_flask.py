@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, g
 from flask_cors import CORS
 from gostop_database import GostopDB
 import jwt
@@ -60,13 +60,26 @@ def generate_tokens(username):
 
 class GostopFlask():
     def __init__(self):
-        self.gostop_db = GostopDB()
         self.app = Flask(__name__)
 
         CORS(self.app, supports_credentials=True, 
                 origins=["http://localhost:5173", "https://tyler-dubuke.com"])
 
+        self.register_hooks()
         self.register_routes()
+
+    def get_db(self):
+        if "gostop_db" not in g:
+            g.gostop_db = GostopDB()
+        return g.gostop_db
+
+    def close_db(self, e=None):
+        db = g.pop("gostop_db", None)
+        if db is not None:
+            db.close()
+
+    def register_hooks(self):
+        self.app.teardown_appcontext(self.close_db)
 
     def _update_point_balances(self, game_data, player_data):
         """
@@ -170,36 +183,36 @@ class GostopFlask():
         for player in player_data:
             player["balance"] += player["point_delta"]
 
-    def _update_balances(self, game_id):
+    def _update_balances(self, game_id, gostop_db):
         """
         Calculate all of the point deltas and update the balances of a specific game
         """
-        game_data = self.gostop_db._get_game_data(game_id)
-        player_data = self.gostop_db._get_game_players(game_id)
+        game_data = gostop_db._get_game_data(game_id)
+        player_data = gostop_db._get_game_players(game_id)
         if game_data is None or player_data is None:
             return
 
         self._calculate_point_deltas(game_data, player_data)
 
         for player in player_data:
-            self.gostop_db._update_player_balance(player.get("player_id"), player.get("balance"))
-            self.gostop_db._update_role_point_delta(player.get("role_id"), player.get("point_delta"))
+            gostop_db._update_player_balance(player.get("player_id"), player.get("balance"))
+            gostop_db._update_role_point_delta(player.get("role_id"), player.get("point_delta"))
 
-    def _clear_deltas_and_balances(self):
+    def _clear_deltas_and_balances(self, gostop_db):
         """
         Clear all the balances and point deltas from the database
         """
-        players = self.gostop_db._get_player()
+        players = gostop_db._get_player()
         if players is not None:
             for player in players:
                 print("Player: ", player)
-                self.gostop_db._update_player_balance(player.get("id"), 0)
+                gostop_db._update_player_balance(player.get("id"), 0)
 
-        roles = self.gostop_db._get_role()
+        roles = gostop_db._get_role()
         if roles is not None:
             for role in roles:
                 print("Role: ", role)
-                self.gostop_db._update_role_point_delta(role.get("id"), 0)
+                gostop_db._update_role_point_delta(role.get("id"), 0)
 
     def register_routes(self):
         @self.app.route("/refresh", methods=["POST"])
@@ -254,9 +267,22 @@ class GostopFlask():
             """
             Get database stats
             """
-            deal_win_per = self.gostop_db._get_win_deal_data().get("dealer_win_percentage")
-            player_games = self.gostop_db._get_player_stats()
-            return jsonify({"dealer_win_percentage": deal_win_per, "players": player_games}), 201
+            gostop_db = self.get_db()
+            resp_dict = {}
+
+            deal_win_per = gostop_db._get_win_deal_data()
+            if deal_win_per is None:
+                resp_dict["dealer_win_percentage"] = 0
+            else:
+                resp_dict["dealer_win_percentage"] = deal_win_per.get("dealer_win_percentage")
+
+            player_games = gostop_db._get_player_stats()
+            if player_games is None:
+                resp_dict["players"] = []
+            else:
+                resp_dict["players"] = player_games
+
+            return jsonify(resp_dict), 200
 
         @self.app.route("/player.svg", methods=["GET"])
         def get_player_svg():
@@ -264,7 +290,8 @@ class GostopFlask():
             Get SVG of player score over time, handling multiple events in the same day,
             and normalize game IDs so there are no gaps in the x-axis.
             """
-            player_data = self.gostop_db._get_player_over_time()
+            gostop_db = self.get_db()
+            player_data = gostop_db._get_player_over_time()
             df = pd.DataFrame(player_data)
 
             # Sort globally by game_id
@@ -279,13 +306,14 @@ class GostopFlask():
 
             plt.figure(figsize=(15, 10))
 
-            for player, group in df.groupby("player_name"):
+            for player_id, group in df.groupby("player_id"):
                 group = group.sort_values("normalized_game_id")
+                player_name = group["player_name"].unique()[0]
 
                 # Cumulative sum of points
                 group["cumulative_points"] = group["point_delta"].cumsum()
 
-                plt.plot(group["normalized_game_id"], group["cumulative_points"], marker="o", label=player)
+                plt.plot(group["normalized_game_id"], group["cumulative_points"], markersize=4, marker="o", label=player_name)
 
             plt.title("Player Points Over Time")
             plt.xlabel("Game")
@@ -305,11 +333,13 @@ class GostopFlask():
             """
             Get the number of games from the database
             """
-            num_game = self.gostop_db._get_num_games()
-            if num_game is None:
-                return jsonify({"error": "Failed query"}), 400
+            gostop_db = self.get_db()
+            num_game = gostop_db._get_num_games()
+            res = 0
+            if num_game is not None:
+                res = num_game[0].get("total_games")
 
-            return jsonify(num_game[0].get("total_games")), 200
+            return jsonify(res), 200
 
         @self.app.route("/games/<int:game_id>", methods=["DELETE"])
         @token_required
@@ -317,16 +347,17 @@ class GostopFlask():
             """
             Delete a game from the database
             """
-            points_game = self.gostop_db._get_game_players(game_id)
+            gostop_db = self.get_db()
+            points_game = gostop_db._get_game_players(game_id)
             if points_game is None:
                 return jsonify({"error": "Unknown game id"}), 400
 
             # Undo the point delta
             for points in points_game:
                 new_balance = points["balance"] - points["point_delta"]
-                self.gostop_db._update_player_balance(points["player_id"], new_balance)
+                gostop_db._update_player_balance(points["player_id"], new_balance)
 
-            self.gostop_db._delete_game(game_id)
+            gostop_db._delete_game(game_id)
             return "", 200
 
         @self.app.route("/update", methods=["PATCH"])
@@ -335,12 +366,13 @@ class GostopFlask():
             """
             0 out all the balances and point deltas for all players and recalculate everything
             """
-            self._clear_deltas_and_balances()
+            gostop_db = self.get_db()
+            self._clear_deltas_and_balances(gostop_db)
 
-            games = self.gostop_db._get_game()
+            games = gostop_db._get_game()
             if games is not None:
                 for game in games:
-                    self._update_balances(game.get("id"))
+                    self._update_balances(game.get("id"), gostop_db)
 
             return jsonify(""), 200
 
@@ -349,11 +381,12 @@ class GostopFlask():
             """
             Get a nice display struct with all the games in it
             """
-            games = self.gostop_db._get_games_layout()
+            gostop_db = self.get_db()
+            games = gostop_db._get_games_layout()
             if games is None:
                 return jsonify([])
 
-            return jsonify(games), 201
+            return jsonify(games), 200
 
         @self.app.route("/games/batch", methods=["POST"])
         @token_required
@@ -361,26 +394,27 @@ class GostopFlask():
             """
             Add a game to the database
             """
+            gostop_db = self.get_db()
             data = request.get_json()
             
             winner_id = data.get("winner_id")
-            game_id = self.gostop_db._insert_new_game(winner_id)
+            game_id = gostop_db._insert_new_game(winner_id)
 
             players = data.get("players")
             for player in players:
                 id = player.get("id")
                 role = player.get("role")
 
-                role_id = self.gostop_db._insert_new_role(game_id, id, role)
+                role_id = gostop_db._insert_new_role(game_id, id, role)
                 for event in player.get("points_events"):
                     event_type = event.get("event_type")
                     points = event.get("points")
-                    self.gostop_db._insert_new_points_event(role_id, event_type, points)
+                    gostop_db._insert_new_points_event(role_id, event_type, points)
 
             # Update all the game balances
-            self._update_balances(game_id)
+            self._update_balances(game_id, gostop_db)
 
-            game_display_data = self.gostop_db._get_games_layout(game_id)
+            game_display_data = gostop_db._get_games_layout(game_id)
             if game_display_data is None:
                 return jsonify([])
 
@@ -397,12 +431,13 @@ class GostopFlask():
         @self.app.route("/players/<int:player_id>", methods=["PATCH"])
         @token_required
         def update_player(player_id):
+            gostop_db = self.get_db()
             data = request.get_json()
             name = data.get("name")
             username = data.get("username")
-            self.gostop_db._set_player_name(player_id, name, username)
+            gostop_db._set_player_name(player_id, name, username)
 
-            player = self.gostop_db._get_player(id=player_id)
+            player = gostop_db._get_player(id=player_id)
             if player is None:
                 return "", 500
 
@@ -410,15 +445,17 @@ class GostopFlask():
 
         @self.app.route("/players", methods=["GET"])
         def get_players():
-            players = self.gostop_db._get_player()
+            gostop_db = self.get_db()
+            players = gostop_db._get_player()
             if players is None:
-                return jsonify([])
+                return jsonify([]), 200
 
-            return jsonify(players)
+            return jsonify(players), 200
 
         @self.app.route("/players", methods=["POST"])
         @token_required
         def add_player():
+            gostop_db = self.get_db()
             data = request.get_json()
             name = data.get("name").strip()
             username = data.get("username").strip()
@@ -426,21 +463,20 @@ class GostopFlask():
                 return jsonify({"error": "Player name is required"}), 400
 
             # Check to see if player already exists
-            player = self.gostop_db._get_player(username=username)
+            player = gostop_db._get_player(username=username)
             if player is not None:
                 return jsonify({"error": "Username taken"}), 409
             
             # insert as new player
-            player_id = self.gostop_db._insert_new_player(name, username)
+            player_id = gostop_db._insert_new_player(name, username)
 
             # get players data and return it to the gui
-            player = self.gostop_db._get_player(id=player_id)
+            player = gostop_db._get_player(id=player_id)
             if player is not None:
                 return jsonify(player[0]), 201
 
             # Should not be possible
             return jsonify([]), 404
-
 
     def run(self, host="0.0.0.0", port=8000, debug=True):
         self.app.run(host=host, port=port, debug=debug)
