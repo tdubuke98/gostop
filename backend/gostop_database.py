@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import json
 import sqlite3
 import os
@@ -13,7 +15,7 @@ DEFAULT_DB = os.getenv("DATABASE_PATH", ".data.DEFAULT.db")
 class GostopDB():
 
     def __init__(self):
-        self.db_con = sqlite3.connect(DEFAULT_DB)
+        self.db_con = sqlite3.connect(DEFAULT_DB, check_same_thread=False)
         self.db_con.row_factory = sqlite3.Row
 
     def close(self):
@@ -208,6 +210,7 @@ class GostopDB():
         if game_id is None:
             cmd = '''SELECT 
                         g.id AS game_id,
+                        g.created_at AS created_at,
                         winner.name AS winner_name,
                         json_group_array(
                             json_object(
@@ -227,6 +230,7 @@ class GostopDB():
         else:
             cmd = '''SELECT 
                         g.id AS game_id,
+                        g.created_at AS created_at,
                         winner.name AS winner_name,
                         json_group_array(
                             json_object(
@@ -248,6 +252,12 @@ class GostopDB():
         
         for game in game_dict:
             game["players"] = json.loads(game["players"])
+
+            # Convert the UTC created_at to Eastern Time (handles DST automatically)
+            if "created_at" in game:
+                utc_time = datetime.fromisoformat(game.get("created_at")).replace(tzinfo=ZoneInfo("UTC"))
+                local_time = utc_time.astimezone(ZoneInfo("America/New_York"))
+                game["created_at"] = local_time.strftime("%Y-%m-%d %H:%M:%S")
 
         if len(game_dict) == 0:
             return None

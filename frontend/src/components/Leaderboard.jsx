@@ -22,9 +22,9 @@ export default function Leaderboard( {setShowNewPlayer, setEditPlayerId, isAuth}
         )}
       </div>
 
-      <div className="flex flex-col overflow-y-auto overflow-x-auto rounded-lg">
+      <div className="flex flex-col overflow-y-auto rounded-lg">
         <table className="w-full text-sm text-center rtl:text-right text-gray-400">
-          <thead className="text-xs uppercase bg-gray-700">
+          <thead className="text-xs uppercase bg-gray-700 sticky top-0">
             <tr>
               <td scope="col" className="px-6 py-2">Place</td>
               <td scope="col" className="px-6 py-2">Name</td>
