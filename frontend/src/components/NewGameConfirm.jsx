@@ -1,7 +1,7 @@
 import React from "react";
 import { usePlayers } from "../context/PlayerContext";
 
-export default function NewGameConfirm({ playing, dealer, seller, winner }) {
+export default function NewGameConfirm({ metadata }) {
   const { players } = usePlayers();
 
   return (
@@ -9,7 +9,7 @@ export default function NewGameConfirm({ playing, dealer, seller, winner }) {
       <h3 className="text-xl font-semibold text-white">Confirmation</h3>
 
       <div className="flex flex-col gap-4 h-full overflow-y-auto">
-        {playing.map((p) => {
+        {metadata.playing.map((p) => {
           const player = players.find(player => player.id === p.id);
           return (
             <div
@@ -24,14 +24,14 @@ export default function NewGameConfirm({ playing, dealer, seller, winner }) {
 
               {/* Winner / Loser */}
               <span className="text-yellow-400 text-xs font-bold uppercase mb-2 sm:mb-0">
-                {player.id === winner.id ? "Winner" : "Loser"}
+                {player.id === metadata.winner.id ? "Winner" : "Loser"}
               </span>
 
               {/* Role: Dealer / Seller / Player */}
               <span className="text-yellow-400 text-xs font-bold uppercase">
-                {player.id === dealer
+                {player.id === metadata.dealer
                   ? "Dealer"
-                  : player.id === seller.id
+                  : player.id === metadata.seller.id
                   ? "Seller"
                   : "Player"}
               </span>

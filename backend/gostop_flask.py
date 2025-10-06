@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request, jsonify, Response, g
+from flask import Flask, request, jsonify, make_response, g
 from flask_cors import CORS
 from gostop_database import GostopDB
 import jwt
 import bcrypt
-import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 import os
 import pandas as pd
@@ -48,12 +48,12 @@ def token_required(f):
 def generate_tokens(username):
     access_token = jwt.encode({
         'username': username,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=1)
+        'exp': datetime.utcnow() + timedelta(minutes=1)
     }, ACCESS_SECRET_KEY, algorithm=ALGORITHM)
 
     refresh_token = jwt.encode({
         'username': username,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
+        'exp': datetime.utcnow() + timedelta(days=7)
     }, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
 
     return access_token, refresh_token
@@ -326,7 +326,14 @@ class GostopFlask():
             plt.savefig(svg_io, format="svg", bbox_inches="tight")
             plt.close()
 
-            return Response(svg_io.getvalue(), mimetype="image/svg+xml")
+            svg_bytes = svg_io.getvalue()
+            resp = make_response(svg_bytes)
+            resp.headers["Content-Type"] = "image/svg+xml"
+            resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            resp.headers["Pragma"] = "no-cache"
+            resp.headers["Expires"] = "0"
+
+            return resp
 
         @self.app.route("/num_games", methods=["GET"])
         def get_num_game():

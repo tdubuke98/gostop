@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { usePlayers } from "../context/PlayerContext";
 
-export default function NewGameDealer({ playing, dealer, setDealer, setNextDisabled }) {
+export default function NewGameDealer({ metadata, setMetadata, setNextDisabled }) {
   const { players } = usePlayers();
 
   useEffect(() => {
-    setNextDisabled(dealer === null);
-  }, [dealer, setNextDisabled]);
+    setNextDisabled(metadata.dealer === null);
+  }, [metadata.dealer, setNextDisabled]);
 
   const handleSelect = (playerId) => {
-    if (dealer === playerId) {
-      setDealer(null); // unselect if clicked again
+    if (metadata.dealer === playerId) {
+      setMetadata( prevMetadata => ({ ...prevMetadata, dealer: null }));
     } else {
-      setDealer(playerId); // set as dealer
+      setMetadata( prevMetadata => ({ ...prevMetadata, dealer: playerId }));
     }
   };
 
@@ -25,7 +25,7 @@ export default function NewGameDealer({ playing, dealer, setDealer, setNextDisab
       {/* Use column on mobile, row on larger screens */}
       <div className="flex flex-col sm:flex-row gap-4 h-full overflow-y-auto">
         <div className="flex flex-col gap-4 w-full shadow-inner">
-          {playing.map((p) => {
+          {metadata.playing.map((p) => {
             const player = players.find((player) => player.id === p.id);
             return (
               <div
@@ -33,7 +33,7 @@ export default function NewGameDealer({ playing, dealer, setDealer, setNextDisab
                 onClick={() => handleSelect(player.id)}
                 className={`flex flex-row items-center justify-between rounded-lg px-4 py-3 cursor-pointer transition duration-200
                   ${
-                    dealer === player.id
+                    metadata.dealer === player.id
                       ? "bg-green-600"
                       : "bg-gray-700 hover:bg-gray-600"
                   }
