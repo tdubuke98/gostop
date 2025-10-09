@@ -122,6 +122,20 @@ class GostopDB():
 
         return cur.lastrowid
 
+    def _update_game_winner(self, game_id, winner_id):
+        """
+        Update the game winner for a specific game
+        """
+
+        cmd = ''' UPDATE games
+                    SET winner_id = :winner_id
+                    WHERE id = :game_id '''
+        
+        cur = self.db_con.cursor()
+        cur.execute(cmd, { "winner_id": winner_id, "game_id": game_id })
+
+        self.db_con.commit()
+
     def _insert_new_game(self, winner_id):
         """
         Insert new game into game database
@@ -189,10 +203,10 @@ class GostopDB():
         get_cmd = ''' SELECT player_id, roles.id AS role_id, role, balance, point_delta
                       FROM roles
                       JOIN players ON players.id = roles.player_id
-                      WHERE roles.game_id=? '''
+                      WHERE roles.game_id = :game_id '''
 
         cur = self.db_con.cursor()
-        res = cur.execute(get_cmd, (game_id, ))
+        res = cur.execute(get_cmd, {"game_id": game_id})
         
         g_obj = res.fetchall()
         game_dict = [dict(g) for g in g_obj]
@@ -264,23 +278,46 @@ class GostopDB():
 
         return game_dict
 
-    def _get_display_game(self, game_id):
+    def _get_game_for_edit(self, game_id):
         """
         Get the information about a specific game by id
         """
 
         cur = self.db_con.cursor()
 
-        get_cmd = ''' SELECT player_id, name, username, point_delta
-                     FROM roles
-                     JOIN games ON roles.game_id = games.id
-                     JOIN players ON roles.player_id = players.id
-                     WHERE games.id=? '''
+        cmd = '''
+                SELECT 
+                    g.winner_id,
+                    json_group_array(
+                        json_object(
+                            'id', r.player_id,
+                            'role', r.role,
+                            'points_events', (
+                                SELECT json_group_array(
+                                    json_object(
+                                        'event_type', pe.event_type,
+                                        'points', pe.points
+                                    )
+                                )
+                                FROM points_events pe
+                                WHERE pe.role_id = r.id
+                            )
+                        )
+                    ) AS players
+                FROM games g
+                LEFT JOIN roles r ON g.id = r.game_id
+                WHERE g.id = ?
+                GROUP BY g.id;
+                '''
 
-        res = cur.execute(get_cmd, (game_id, ))
+        res = cur.execute(cmd, (game_id, ))
         
         g_obj = res.fetchall()
         game_dict = [dict(g) for g in g_obj]
+
+        for game in game_dict:
+            game["players"] = json.loads(game["players"])
+
         if len(game_dict) == 0:
             return None
 
@@ -366,7 +403,6 @@ class GostopDB():
 
         return stats_dict[0]
 
-
     def _get_game_data(self, game_id):
         """
         Get the information about a specific game by id
@@ -390,17 +426,43 @@ class GostopDB():
 
         return game_dict
 
+    def _delete_game_data(self, game_id):
+        """
+        Delete all roles and points events for a specific game
+
+        This does NOT delete the game and will mess up balances if not handled properly
+
+        Balances are owned by the player table and this will not undo them!
+        """
+
+        cur = self.db_con.cursor()
+
+        # First delete points events associated with roles in the game
+        cmd_points = ''' DELETE FROM points_events
+                         WHERE role_id IN (
+                             SELECT id FROM roles WHERE game_id = :game_id
+                         ) '''
+        cur.execute(cmd_points, {"game_id": game_id})
+
+        # Then delete roles associated with the game
+        cmd_roles = ''' DELETE FROM roles
+                        WHERE game_id = :game_id '''
+        cur.execute(cmd_roles, {"game_id": game_id})
+
+        self.db_con.commit()
+
     def _delete_game(self, id):
         """
         Delete a specified game by id
+
+        Balances are owned by the player table and this will not undo them!
         """
         cur = self.db_con.cursor()
 
         cmd = ''' DELETE FROM games
-                  WHERE id=?'''
+                  WHERE id = :game_id '''
 
-        cur.execute(cmd, (id, ))
-
+        cur.execute(cmd, {"game_id": id})
         self.db_con.commit()
 
     def _delete_player(self, id):

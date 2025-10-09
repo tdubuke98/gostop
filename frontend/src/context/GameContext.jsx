@@ -28,10 +28,27 @@ export const GameProvider = ({ children }) => {
     }
   };
 
+  const getGameForEdit = async (id) => {
+    try {
+      const resp = await sendREST(`/games/${id}`, undefined, "GET");
+      return resp;
+    } catch (error) {
+      console.error("Failed to fetch game for edit:", error);
+    }
+  }
+
   const sendNewGame = async (payload) => {
     try {
-      const game = await sendREST(`/games/batch`, payload, "POST")
-      setGames([...game, ...games])
+      const newGames = await sendREST(`/games/new_game`, payload, "POST")
+      const existingIndex = games.findIndex((g) => g.game_id === newGames[0].game_id);
+
+      if (existingIndex !== -1) {
+        const updatedGames = [...games];
+        updatedGames[existingIndex] = newGames[0];
+        setGames(updatedGames);
+      } else {
+        setGames([...newGames, ...games]);
+      }
     } catch (err) {
       console.error("Create game failed:", err);
       throw err;
@@ -56,30 +73,11 @@ export const GameProvider = ({ children }) => {
     fetchNumGames();
   };
 
-  const createGame = async (winner_id) => {
-    try {
-      const data = await sendREST("/games", { winner_id: winner_id }, "POST")
-      return data;
-    } catch (err) {
-      console.error("Create game failed:", err);
-      throw err;
-    }
-  }
-
   async function reloadBalances() {
     try {
       await sendREST("/update", undefined, "PATCH")
     } catch (err) {
       console.error("Reload balances failed:", err);
-      throw err;
-    }
-  };
-
-  const updateGameBalance = async (gameId) => {
-    try {
-      await sendREST(`/update/${gameId}`, undefined, "PATCH")
-    } catch (err) {
-      console.error("Update game balances failed:", err);
       throw err;
     }
   };
@@ -90,7 +88,7 @@ export const GameProvider = ({ children }) => {
   }, []);
 
   return (
-    <GameContext.Provider value={{ games, updateGameBalance, sendNewGame, reloadBalances, createGame, deleteGame, numGames }}>
+    <GameContext.Provider value={{ games, sendNewGame, reloadBalances, deleteGame, numGames, getGameForEdit }}>
       {children}
     </GameContext.Provider>
   );

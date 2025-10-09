@@ -15,7 +15,7 @@ export default function NewGamePlayers({ metadata, setMetadata, setNextDisabled 
     if (selected && !metadata.playing.some((p) => p.id === selected.id)) {
       const newPlaying = [
         ...metadata.playing,
-        { id: selected.id, frl: false, multiplier: 1, roleId: null },
+        { id: selected.id, frl: false, multiplier: 1 },
       ];
       setMetadata( prevMetadata => ({...prevMetadata, playing: newPlaying }));
     }
@@ -36,7 +36,9 @@ export default function NewGamePlayers({ metadata, setMetadata, setNextDisabled 
 
   return (
     <div className="flex flex-col gap-2 h-full overflow-y-auto">
-      <h3 className="text-xl font-semibold text-white">New Game</h3>
+      <h3 className="text-xl font-semibold text-white">
+        {metadata.gameId !== null ? 'Edit Game' : 'New Game'}
+      </h3>
 
       <div className="flex flex-col lg:flex-row gap-4 h-full justify-between overflow-y-auto">
 

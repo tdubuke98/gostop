@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Award, ArrowBigRight, UserPlus, UserRoundCog } from "lucide-react";
+import { Award, UserPlus, UserRoundCog } from "lucide-react";
 import { usePlayers } from "../context/PlayerContext";
 
 export default function Leaderboard( {setShowNewPlayer, setEditPlayerId, isAuth} ) {
