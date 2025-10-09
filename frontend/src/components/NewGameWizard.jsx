@@ -1,13 +1,10 @@
-import React, { useState } from "react";
-import { usePlayers } from "../context/PlayerContext";
+import React, { useState, useEffect } from "react";
 import { useGames } from "../context/GameContext";
 import NewGamePlayers from "./NewGamePlayers";
 import NewGameDealer from "./NewGameDealer";
 import NewGameSeller from "./NewGameSeller";
 import NewGameScore from "./NewGameScore";
 import NewGameConfirm from "./NewGameConfirm";
-import { sendREST } from "../utils/api.js";
-import { ChevronLeftSquare } from "lucide-react";
 
 export const WizardPage = {
   SELECT_PLAYERS: "SELECT_PLAYERS",
@@ -17,60 +14,43 @@ export const WizardPage = {
   CONFIRM: "CONFIRM",
 };
 
-export default function NewGameWizard({ setShowNewGame }) {
-  const { sendNewGame } = useGames();
+export default function NewGameWizard({ setShowGameWizard, editGameId, setEditGameId }) {
+  const { sendNewGame, deleteGame, getGameForEdit } = useGames();
 
   const [currentPage, setCurrentPage] = useState(WizardPage.SELECT_PLAYERS);
   const [nextDisabled, setNextDisabled] = useState(false);
 
   const [metadata, setMetadata] = useState({
     playing: [], 
+    gameId: null,
     dealer: null, 
     seller: {id: null, points: 0}, 
     winner: {id: null, points: 0}
   });
 
-  const clearMetadata = () => {
-    setMetadata({});
-    setShowNewGame(false);
-  }
-
-  const handleSave = async () => {
-    const payload = {
-      winner_id: metadata.winner.id,
-      players: [],
+  useEffect(() => {
+    const fetchGameForEdit = async () => {
+      if (editGameId !== null) {
+        const game = await getGameForEdit(editGameId);
+        setMetadata(game);
+      }
     };
 
-    for (const player of metadata.playing) {
-      let role = "PLAYER";
+    fetchGameForEdit();
+  }, []);
 
-      if (player.id === metadata.dealer) role = "DEALER";
-      else if (player.id === metadata.seller.id) role = "SELLER";
+  const handleDelete = async (id) => {
+    await deleteGame(id);
 
-      const pointsEvents = [];
+    setEditGameId(null);
+    setShowGameWizard(false);
+  };
 
-      if (player.frl) {
-        pointsEvents.push({ event_type: "FIRST_ROUND_LOCK", points: 5 });
-      }
+  const handleSave = async () => {
+    await sendNewGame(metadata);
 
-      if (player.id === metadata.winner.id) {
-        pointsEvents.push({ event_type: "WIN", points: metadata.winner.points });
-      } else if (player.id === metadata.seller.id) {
-        pointsEvents.push({ event_type: "SELL", points: metadata.seller.points });
-      } else {
-        pointsEvents.push({ event_type: "LOSS_MULTIPLIER", points: player.multiplier });
-      }
-
-      payload.players.push({
-        id: player.id,
-        role,
-        points_events: pointsEvents,
-      });
-    }
-
-    await sendNewGame(payload);
-
-    clearMetadata();
+    setEditGameId(null);
+    setShowGameWizard(false);
   };
 
   const handleNext = () => {
@@ -99,7 +79,7 @@ export default function NewGameWizard({ setShowNewGame }) {
         setCurrentPage(WizardPage.CHOOSE_DEALER);
         break;
       case WizardPage.SCORE_RESULTS:
-        setCurrentPage(playing.length === 4 ? WizardPage.CHOOSE_SELLER : WizardPage.CHOOSE_DEALER);
+        setCurrentPage(metadata.playing.length === 4 ? WizardPage.CHOOSE_SELLER : WizardPage.CHOOSE_DEALER);
         break;
       case WizardPage.CONFIRM:
         setCurrentPage(WizardPage.SCORE_RESULTS);
@@ -149,41 +129,59 @@ export default function NewGameWizard({ setShowNewGame }) {
         )}
 
         {/* Controls */}
-        <div className="flex flex-wrap justify-end gap-2">
-          <button
-            onClick={handleBack}
-            disabled={currentPage === WizardPage.SELECT_PLAYERS}
-            className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-white transition disabled:opacity-50"
-          >
-            Previous
-          </button>
+        <div className="flex flex-row justify-between items-center">
 
-          <button
-            onClick={clearMetadata}
-            className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-white transition"
-          >
-            Cancel
-          </button>
+          <div className="flex gap-2 justify-left">
+            {metadata.gameId !== null && (
+              <button
+                onClick={() => handleDelete(metadata.gameId)}
+                className="px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white transition"
+              >
+                Delete
+              </button>
+            )}
+          </div>
 
-          {currentPage !== WizardPage.CONFIRM ? (
+          <div className="flex flex-row gap-2 justify-end">
             <button
-              onClick={handleNext}
-              disabled={nextDisabled}
-              className={`${nextDisabled
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-                } px-4 py-2 rounded text-white transition`}
+              onClick={handleBack}
+              disabled={currentPage === WizardPage.SELECT_PLAYERS}
+              className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-white transition disabled:opacity-50"
             >
-              Next
+              Previous
             </button>
-          ) : (
+
             <button
-              onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white transition"
+              onClick={() => {
+                setEditGameId(null);
+                setShowGameWizard(false);
+              }}
+              className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500 text-white transition"
             >
-              Save
+              Cancel
             </button>
-          )}
+
+            {currentPage !== WizardPage.CONFIRM ? (
+              <button
+                onClick={handleNext}
+                disabled={nextDisabled}
+                className={`${nextDisabled
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+                  } px-4 py-2 rounded text-white transition`}
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={handleSave}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white transition"
+              >
+                {metadata.gameId === null ? 'Save' : 'Update'}
+              </button>
+            )}
+          </div>
+
         </div>
       </div>
     </div>

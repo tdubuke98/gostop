@@ -35,7 +35,6 @@ def token_required(f):
 
         try:
             data = jwt.decode(token, ACCESS_SECRET_KEY, algorithms=[ALGORITHM])
-            print(data)
         except jwt.ExpiredSignatureError:
             return jsonify({"message": "Token has expired"}), 401
         except Exception as e:
@@ -205,14 +204,25 @@ class GostopFlask():
         players = gostop_db._get_player()
         if players is not None:
             for player in players:
-                print("Player: ", player)
                 gostop_db._update_player_balance(player.get("id"), 0)
 
         roles = gostop_db._get_role()
         if roles is not None:
             for role in roles:
-                print("Role: ", role)
                 gostop_db._update_role_point_delta(role.get("id"), 0)
+
+    def _undo_game_balances(self, game_id, gostop_db):
+        """
+        Undo the point deltas from a specific game
+        """
+        points_game = gostop_db._get_game_players(game_id)
+        if points_game is None:
+            return
+
+        for points in points_game:
+            new_balance = points["balance"] - points["point_delta"]
+            gostop_db._update_player_balance(points["player_id"], new_balance)
+            gostop_db._update_role_point_delta(points["role_id"], 0)
 
     def register_routes(self):
         @self.app.route("/refresh", methods=["POST"])
@@ -221,7 +231,6 @@ class GostopFlask():
             Refresh the access tokens
             """
             token = request.cookies.get("refresh_token")
-            print(request)
 
             if not token:
                 return jsonify({"message": "Refresh token is missing!"}), 401
@@ -355,14 +364,7 @@ class GostopFlask():
             Delete a game from the database
             """
             gostop_db = self.get_db()
-            points_game = gostop_db._get_game_players(game_id)
-            if points_game is None:
-                return jsonify({"error": "Unknown game id"}), 400
-
-            # Undo the point delta
-            for points in points_game:
-                new_balance = points["balance"] - points["point_delta"]
-                gostop_db._update_player_balance(points["player_id"], new_balance)
+            self._undo_game_balances(game_id, gostop_db)
 
             gostop_db._delete_game(game_id)
             return "", 200
@@ -395,7 +397,53 @@ class GostopFlask():
 
             return jsonify(games), 200
 
-        @self.app.route("/games/batch", methods=["POST"])
+        @self.app.route("/games/<int:game_id>", methods=["GET"])
+        @token_required
+        def get_game(game_id):
+            """
+            Get a specific game from the database
+            """
+            gostop_db = self.get_db()
+
+            game = gostop_db._get_game_for_edit(game_id)
+            if game is None:
+                return jsonify([]), 404
+
+            game = game[0]
+
+            resp_dict = {"playing": [], "gameId": game_id, "dealer": None, "seller": {}, "winner": {}}
+            resp_dict["winner"]["id"] = game.get("winner_id")
+            players = game.get("players", [])
+
+            for player in players:
+                if player.get("role") == "DEALER":
+                    resp_dict["dealer"] = player.get("id")
+
+                if player.get("role") == "SELLER":
+                    resp_dict["seller"]["id"] = player.get("id")
+                    for event in player.get("points_events", []):
+                        if event.get("event_type") == "SELL":
+                            resp_dict["seller"]["points"] = event.get("points", 0)
+                            break
+
+                if player.get("id") == game.get("winner_id"):
+                    for event in player.get("points_events", []):
+                        if event.get("event_type") == "WIN":
+                            resp_dict["winner"]["points"] = event.get("points", 0)
+                            break
+
+                player_entry = {"id": player.get("id"), "frl": False, "multiplier": 1}
+                for event in player.get("points_events", []):
+                    if event.get("event_type") == "FIRST_ROUND_LOCK":
+                        player_entry["frl"] = True
+                    elif event.get("event_type") == "LOSS_MULTIPLIER":
+                        player_entry["multiplier"] = event.get("points", 1)
+
+                resp_dict["playing"].append(player_entry)
+
+            return jsonify(resp_dict), 200
+
+        @self.app.route("/games/new_game", methods=["POST"])
         @token_required
         def add_game():
             """
@@ -404,19 +452,58 @@ class GostopFlask():
             gostop_db = self.get_db()
             data = request.get_json()
             
-            winner_id = data.get("winner_id")
-            game_id = gostop_db._insert_new_game(winner_id)
+            winner_id = data.get("winner").get("id")
+            if winner_id is None:
+                return jsonify({"error": "Winner id is required"}), 400
 
-            players = data.get("players")
+            winner_points = data.get("winner").get("points")
+            if winner_points is None:
+                return jsonify({"error": "Winner points are required"}), 400
+
+            dealer_id = data.get("dealer")
+            if dealer_id is None:
+                return jsonify({"error": "Dealer id is required"}), 400
+
+            # Seller is optional
+            seller_id = data.get("seller").get("id")
+            seller_points = data.get("seller").get("points")
+
+            players = data.get("playing")
+            if players is None:
+                return jsonify({"error": "Players are required"}), 400
+
+            # If this an edit game, remove all the game data and re-add it
+            game_id = data.get("gameId")
+            if game_id is not None:
+                # Undo the balances from the previous game
+                self._undo_game_balances(game_id, gostop_db)
+                gostop_db._delete_game_data(game_id)
+
+                gostop_db._update_game_winner(game_id, winner_id)
+            else:
+                game_id = gostop_db._insert_new_game(winner_id)
+
             for player in players:
                 id = player.get("id")
-                role = player.get("role")
+                multiplier = player.get("multiplier", 1)
+                frl = player.get("frl", False)
 
+                role = "PLAYER"
+                if id == dealer_id: role = "DEALER"
+                elif id == seller_id: role = "SELLER"
+
+                # Insert the new role
                 role_id = gostop_db._insert_new_role(game_id, id, role)
-                for event in player.get("points_events"):
-                    event_type = event.get("event_type")
-                    points = event.get("points")
-                    gostop_db._insert_new_points_event(role_id, event_type, points)
+
+                if frl:
+                    gostop_db._insert_new_points_event(role_id, "FIRST_ROUND_LOCK", 5)
+
+                if id == winner_id:
+                    gostop_db._insert_new_points_event(role_id, "WIN", winner_points)
+                elif id == seller_id:
+                    gostop_db._insert_new_points_event(role_id, "SELL", seller_points)
+                else:
+                    gostop_db._insert_new_points_event(role_id, "LOSS_MULTIPLIER", multiplier)
 
             # Update all the game balances
             self._update_balances(game_id, gostop_db)
